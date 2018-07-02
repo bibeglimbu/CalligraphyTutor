@@ -1,0 +1,75 @@
+﻿<UserControl x:Class="CalligraphyTutor.View.ExpertView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:CalligraphyTutor.View"
+             mc:Ignorable="d"              
+             xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+             xmlns:Model="clr-namespace:CalligraphyTutor.Model"
+             DataContext="{StaticResource ExpertViewModel}">
+
+    <Grid Background="#7ec0ee">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="0.2*"/>
+            <RowDefinition Height="2.0*"/>
+            <RowDefinition Height="0.2*"/>
+        </Grid.RowDefinitions>
+
+        <DockPanel HorizontalAlignment="Center" Grid.Row="0" Margin="5,5,5,5" >
+            <Button Content="ClearStrokes" Command="{Binding ClearButton_clicked}"
+                        Width="300" Height="40" Margin="5,5,5,5" >
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="FontFamily" Value="/Resources/#BLACKCHANCERY"/>
+                        <Setter Property="FontSize" Value="24"/>
+                    </Style>
+                </Button.Style>
+            </Button>
+
+            <Button Content="{Binding RecordButtonName}" Command="{Binding RecordButton_clicked}"
+                Width="300" Height="40" Margin="5,5,5,5" >
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="{Binding Path=RecordButtonColor}"/>
+                        <Setter Property="FontFamily" Value="/Resources/#BLACKCHANCERY"/>
+                        <Setter Property="FontSize" Value="24"/>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </DockPanel>
+
+        <Grid Grid.Row="1" VerticalAlignment="Top">
+            <InkCanvas Name="ExpertInkCanvas" Height="300" Strokes="{Binding ExpertStrokes}">
+                <i:Interaction.Triggers>
+                    <i:EventTrigger EventName="StylusMove">
+                        <Model:InvokeDelegateCommandAction Command="{Binding ExpertCanvas_OnStylusMoved}"
+                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
+                    </i:EventTrigger>
+                </i:Interaction.Triggers>
+            </InkCanvas>
+
+            <Line Stroke="Black" Grid.Row="1" Height="2" Margin="0,-200,0,0" StrokeThickness="4"
+              X1="0" X2="{Binding ScreenWidth}" >
+            </Line>
+
+            <Line Stroke="Black" Grid.Row="1" Height="2" StrokeThickness="2"  StrokeDashArray="2" Margin="0,-50,0,0"
+              X1="0" X2="{Binding ScreenWidth}" >
+            </Line>
+
+            <Line Stroke="Black" Grid.Row="1" Height="2" StrokeThickness="2"  StrokeDashArray="2" Margin="0,50,0,0"
+              X1="0" X2="{Binding ScreenWidth}" >
+            </Line>
+
+            <Line Stroke="Black" Grid.Row="1" Height="2"  Margin="0,200,0,0"  StrokeThickness="4"
+              X1="0" X2="{Binding ScreenWidth}" >
+            </Line>
+        </Grid>
+
+        <Grid Grid.Row="2" HorizontalAlignment="Center">
+            <TextBlock>Welcome to expert mode</TextBlock>
+        </Grid>
+        
+    </Grid>
+</UserControl>

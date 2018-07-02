@@ -1,0 +1,12 @@
+Hololens Calligraphy (ensure that they match)
+StartHub.cs: IPAddress & ports
+LearningHubListener.cs :  Ports
+
+portconfig.txt in hololens
+
+calligraphy trainer:
+Ensure the ip and port are matching in portconfig.txt
+
+feedbackPortConfig.txt
+
+if you start recording with out the student view on the value _recording wont be changed.

@@ -1,0 +1,15 @@
+﻿<UserControl x:Class="CalligraphyTutor.View.MainWindowView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:CalligraphyTutor.View"
+             mc:Ignorable="d" 
+             DataContext="{StaticResource MainWindowViewModel}">
+    
+    <Grid Background="#7ec0ee">
+        <Grid Background="#7ec0ee">
+            <TextBlock>Welcome to Calligraphy Tutor</TextBlock>
+        </Grid>
+    </Grid>
+</UserControl>
