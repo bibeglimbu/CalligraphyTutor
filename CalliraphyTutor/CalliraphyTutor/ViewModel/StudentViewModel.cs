@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Speech.Synthesis;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -12,11 +13,10 @@ using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using System.Speech.Synthesis;
 
 namespace CalligraphyTutor.ViewModel
 {
-    class StudentViewModel: BindableBase
+    public class StudentViewModel: BindableBase
     {
         #region Vars & properties
 
@@ -27,7 +27,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _animationTimer = value;
-                OnPropertyChanged("UpdateAnimation");
+                RaisePropertyChanged("UpdateAnimation");
             }
         }
 
@@ -39,7 +39,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _studentTimer = value;
-                OnPropertyChanged("StudentTimer");
+                RaisePropertyChanged("StudentTimer");
             }
         }
 
@@ -52,7 +52,7 @@ namespace CalligraphyTutor.ViewModel
             {
                 _screenWidth = value;
                 //NotifyOfPropertyChange(() => ScreenWidth);
-                OnPropertyChanged("ScreenWidth");
+                RaisePropertyChanged("ScreenWidth");
             }
         }
         private int _screenHeight = (int)SystemParameters.PrimaryScreenHeight;
@@ -63,7 +63,7 @@ namespace CalligraphyTutor.ViewModel
             {
                 _screenHeight = value;
                 //NotifyOfPropertyChange(() => ScreenHeight);
-                OnPropertyChanged("ScreenHeight");
+                RaisePropertyChanged("ScreenHeight");
             }
         }
         //name of the button
@@ -74,7 +74,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _recordButtonName = value;
-                OnPropertyChanged("RecordButtonName");
+                RaisePropertyChanged("RecordButtonName");
             }
         }
         //color of the button
@@ -85,7 +85,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _brushColor = value;
-                OnPropertyChanged("RecordButtonColor");
+                RaisePropertyChanged("RecordButtonColor");
             }
         }
 
@@ -97,7 +97,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _studentStrokes = value;
-                OnPropertyChanged("StudentStrokes");
+                RaisePropertyChanged("StudentStrokes");
             }
         }
         public StrokeCollection ExpertStrokes
@@ -106,7 +106,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _expertStrokes = value;
-                OnPropertyChanged("ExpertStrokes");
+                RaisePropertyChanged("ExpertStrokes");
             }
         }
 
@@ -127,27 +127,68 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _stayOpen = value;
-                OnPropertyChanged("StayOpen");
+                RaisePropertyChanged("StayOpen");
             }
         }
 
-        private SpeechSynthesizer synthesizer;
+
+
+        Globals globals;
+
+        private bool _isRecording = false;
+        public bool StudentIsRecording
+        {
+            get { return _isRecording; }
+            set
+            {
+                _isRecording = value;
+            }
+        }
         #endregion
 
         public StudentViewModel()
         {
-            HubConnector.myConnector.startRecordingEvent += MyConnector_startRecordingEvent;
-            HubConnector.myConnector.stopRecordingEvent += MyConnector_stopRecordingEvent;
 
+            globals = Globals.Instance;
             StudentTimer.Interval = new TimeSpan(10000);
             StudentTimer.Tick += AnimationTimer_Tick;
 
-            synthesizer = new SpeechSynthesizer();
-            synthesizer.Volume = 100;  // 0...100
-            synthesizer.Rate = 1;     // -10...10
+            ResultsViewModel.ButtonClicked += ResultsViewModel_ButtonClicked;
+
+            setValueNames();
+        }
+
+        private void setValueNames()
+        {
+            List<string> names = new List<string>();
+            names.Add("PenPressure");
+            names.Add("Tilt_X");
+            names.Add("Tilt_Y");
+            //myConnector.setValuesName(names);
+        }
+
+        private void ResultsViewModel_ButtonClicked(object sender, EventArgs e)
+        {
+            StayOpen = false;
         }
 
         #region Events Definition
+
+        public event EventHandler<DebugEventArgs> DebugReceived;
+        protected virtual void OnDebugReceived(DebugEventArgs e)
+        {
+            EventHandler<DebugEventArgs> handler = DebugReceived;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+
+        public class DebugEventArgs : EventArgs
+        {
+            public string message { get; set; }
+        }
+
         public static event EventHandler<MaxMinChangedEventArgs> MaxMinChanged;
         protected virtual void OnMaxMinchanged(MaxMinChangedEventArgs e)
         {
@@ -168,6 +209,24 @@ namespace CalligraphyTutor.ViewModel
         #endregion
 
         #region Events
+        private void MyFeedback_feedbackReceivedEvent(object sender, string feedback)
+        {
+            if (globals.Speech.State != SynthesizerState.Speaking)
+            {
+                ReadStream(feedback);
+            }
+        }
+
+        private void ReadStream(String s)
+        {
+            if (s.Contains("Read"))
+            {
+                s.Remove(0, 4);
+                globals.Speech.SpeakAsync("Grip the pen gently");
+               
+            }
+
+        }
         //Method called everytime the timer is updated
         private void AnimationTimer_Tick(object sender, EventArgs e)
         {
@@ -176,21 +235,18 @@ namespace CalligraphyTutor.ViewModel
 
         private void MyConnector_startRecordingEvent(Object sender)
         {
-            Debug.WriteLine("start");
-            setValueNames();
-            StartRecordingData();
+             StartRecordingData();
         }
 
         private void MyConnector_stopRecordingEvent(Object sender)
         {
-            if (ExpertStrokeLoaded == false)
-            {
-                LoadStrokes();
-            }
-            Debug.WriteLine("stop");
-            StartRecordingData();
-
+                    if (ExpertStrokeLoaded == false)
+                    {
+                        LoadStrokes();
+                    }
+                    StartRecordingData();
         }
+
 
         //reference StylusPointCollection used for checking Current partition on hit test.
         private StylusPointCollection _tempSPCollectionCurrentPartition = new StylusPointCollection();
@@ -221,8 +277,8 @@ namespace CalligraphyTutor.ViewModel
                 if (sp.GetPropertyValue(StylusPointProperties.X) >= 9000 || sp.GetPropertyValue(StylusPointProperties.X) >= 11000)
                 {
                     Debug.WriteLine("Ensure the angle of the pen is roughly 45");
-                    //HubConnector.myConnector.sendFeedback("Ensure the angle of the pen is roughly 45 ");
-                    synthesizer.Speak("Ensure the angle of the pen is roughly 45 ");
+                    //myConnector.sendFeedback("Ensure the angle of the pen is roughly 45 ");
+                    globals.Speech.Speak("Ensure the angle of the pen is roughly 45 ");
                 }
 
                 //start saving the sp to the holder
@@ -264,21 +320,14 @@ namespace CalligraphyTutor.ViewModel
         #endregion
 
         #region Send data
-        public void setValueNames()
-        {
-            List<string> names = new List<string>();
-            names.Add("PenPressure");
-            HubConnector.SetValuesName(names);
 
-        }
-
-        public void SendData(StylusEventArgs args)
+        private void SendData(StylusEventArgs args)
         {
             List<string> values = new List<string>();
             String v = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
             values.Add(v);
             //Debug.WriteLine(v);
-            HubConnector.SendData(values);
+            //myConnector.storeFrame(values);
         }
         #endregion
 
@@ -302,7 +351,7 @@ namespace CalligraphyTutor.ViewModel
         }
         private void LoadStrokes()
         {
-            ExpertStrokes = new StrokeCollection(Globals.GlobalFileManager.LoadStroke());
+            ExpertStrokes = new StrokeCollection(globals.GlobalFileManager.LoadStroke());
             ExpertStrokeLoaded = true;
             //start the timer
             //StudentTimer.Start();
@@ -319,37 +368,40 @@ namespace CalligraphyTutor.ViewModel
                 return _buttonClicked;
             }
         }
+        public ICommand _recordButtonClicked;
         public ICommand RecordButton_clicked
         {
             get
             {
-                _buttonClicked = new RelayCommand(
-                    param => this.StartRecordingData(),
-                    null
-                    );
-
-                return _buttonClicked;
+                if (_recordButtonClicked == null)
+                {
+                        _recordButtonClicked = new RelayCommand(
+                            param => this.StartRecordingData(),
+                            null
+                            );
+                }
+                return _recordButtonClicked;
             }
+
         }
 
         private void StartRecordingData()
         {
-
-            if (Globals.IsRecording == false)
+            if (StudentIsRecording == false)
             {
                 StudentStrokes.Clear();
-                StayOpen = false;
-                Globals.IsRecording = true;
+                StudentIsRecording = true;
                 RecordButtonName = "Stop Recording";
                 RecordButtonColor = new SolidColorBrush(Colors.Green);
+                StayOpen = false;
             }
-            else if (Globals.IsRecording == true)
+            else if (StudentIsRecording == true)
             {
-                Globals.IsRecording = false;
-                StayOpen = true;
+                StudentIsRecording = false;
                 RecordButtonName = "Start Recording";
                 StudentStrokes.Clear();
                 RecordButtonColor = new SolidColorBrush(Colors.White);
+                StayOpen = true;
             }
         }
         #endregion
@@ -379,11 +431,11 @@ namespace CalligraphyTutor.ViewModel
                 //Debug.WriteLine("Color Changed");
                 if (c == Colors.Red)
                 {
-                    if (Globals.IsRecording == true)
+                    if (StudentIsRecording == true)
                     {
                         try
                         {
-                            HubConnector.myConnector.sendFeedback("Myo ping");
+                            //myConnector.sendFeedback("Myo");
                             Debug.WriteLine("StudentViewModel: Myo feedback Sent");
                         }
                         catch (Exception ex)
@@ -499,19 +551,24 @@ namespace CalligraphyTutor.ViewModel
                     partitionCount = 0;
                 }
 
-                if ((DateTime.Now - Globals.LastExecution).TotalSeconds > 1)
+                if ((DateTime.Now - globals.LastExecution).TotalSeconds > 0.5)
                 {
-                    //check if the student is between the experts range, current issue with the pressure at 4000 level while drawn but changes to 1000 when stroke is created
-                    if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure)/4 > (((LoadingStroke)_expertStrokes[partitionCount]).MaxPressure + 50))
+                    if (globals.Speech.State != SynthesizerState.Speaking)
                     {
-                        new Task(() => synthesizer.Speak("Pressure too high")).Start();
-                        //Debug.WriteLine("Pressure "+ e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure));
+                        //check if the student is between the experts range, current issue with the pressure at 4000 level while drawn but changes to 1000 when stroke is created
+                        if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure) / 4 > (((LoadingStroke)_expertStrokes[partitionCount]).MaxPressure + 50))
+                        {
+                            new Task(() => globals.Speech.SpeakAsync("Pressure too high")).Start();
+                            //Debug.WriteLine("Pressure "+ e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure));
+                        }
+                        if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure) / 4 < (((LoadingStroke)_expertStrokes[partitionCount]).MinPressure - 50))
+                        {
+                            new Task(() => globals.Speech.SpeakAsync("Pressure too low")).Start();
+                        }
+
                     }
-                    if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure)/4 < (((LoadingStroke)_expertStrokes[partitionCount]).MinPressure - 50))
-                    {
-                        new Task(() => synthesizer.Speak("Pressure too low")).Start();
-                    }
-                    Globals.LastExecution = DateTime.Now;
+
+                    globals.LastExecution = DateTime.Now;
                 }
             }
 
@@ -578,5 +635,12 @@ namespace CalligraphyTutor.ViewModel
 
         }
         #endregion
+
+        public void SendDebug(string s)
+        {
+            DebugEventArgs args = new DebugEventArgs();
+            args.message = s;
+            OnDebugReceived(args);
+        }
     }
 }

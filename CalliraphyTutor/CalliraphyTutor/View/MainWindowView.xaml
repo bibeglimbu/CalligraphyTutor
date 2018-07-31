@@ -9,7 +9,7 @@
     
     <Grid Background="#7ec0ee">
         <Grid Background="#7ec0ee">
-            <TextBlock>Welcome to Calligraphy Tutor</TextBlock>
+            <TextBlock HorizontalAlignment="Center">Welcome to Calligraphy Tutor</TextBlock>
         </Grid>
     </Grid>
 </UserControl>

@@ -10,17 +10,29 @@
              d:DesignHeight="650" d:DesignWidth="800">
     <Grid Background="#7ec0ee">
         <Grid.RowDefinitions>
-            <RowDefinition Height="1*"/>
-            <RowDefinition Height="0.2*"/>
-            <RowDefinition Height="1.5*"/>
-            <RowDefinition Height="1*"/>
+            <RowDefinition Height="0.6*"/>
+            <RowDefinition Height="0.3*"/>
+            <RowDefinition Height="0.1*"/>
+            <RowDefinition Height="1.6*"/>
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0">
-            <TextBlock Text="Draw calligraphy" FontSize="60" FontFamily="Resources/#BLACKCHANCERY"
+            <TextBlock Text="Performance Results" FontSize="60" FontFamily="Resources/#BLACKCHANCERY"
                        TextBlock.Foreground="White"  VerticalAlignment="Center" HorizontalAlignment="Center"/>
         </Grid>
-        <Grid Grid.Row="1" Background="White">
+        <DockPanel Grid.Row="1" HorizontalAlignment="Center">
+            <Button  Content="Close Results" Command="{Binding CloseButton_clicked}"    
+                Width="300" Height="40" Margin="5,5,5,5">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="FontFamily" Value="/Resources/#BLACKCHANCERY"/>
+                        <Setter Property="FontSize" Value="28"/>
+                    </Style>
+                </Button.Style>
+            </Button>
+        </DockPanel>
+        <Grid Grid.Row="2" Background="White">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1*"/>
                 <ColumnDefinition Width="1*"/>
@@ -33,7 +45,7 @@
             <TextBox Grid.Column="3" Text="StudentMinPressure"/>
         </Grid>
 
-        <Grid Grid.Row="2" Background="White" Height="400">
+        <Grid Grid.Row="3" Background="White" Height="400">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="1*"/>
                 <ColumnDefinition Width="1*"/>
@@ -59,9 +71,6 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>-->
-        </Grid>
-        <Grid Grid.Row="3">
-
         </Grid>
     </Grid>
 </UserControl>

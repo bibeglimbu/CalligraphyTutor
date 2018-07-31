@@ -22,11 +22,12 @@ namespace CalligraphyTutor.Model
         private Brush _strokeBrush = new SolidColorBrush();
 
         private DispatcherTimer _dispatchTimer = new DispatcherTimer();
-        
+        Globals globals;
         #endregion
 
         public ExpertInkCanvas(): base()
         {
+            globals = Globals.Instance;
             _dispatchTimer.Interval = new TimeSpan(10000);
             _dispatchTimer.Tick += _dispatchTimer_Tick;
             
@@ -36,7 +37,7 @@ namespace CalligraphyTutor.Model
         
         private void _dispatchTimer_Tick(object sender, EventArgs e)
         {
-            if (this.Strokes.Count > 0 && Globals.IsStylusDown == false)
+            if (this.Strokes.Count > 0 && globals.IsStylusDown == false)
             {
                 StrokeCollection s = Strokes;
                 Application.Current.Dispatcher.InvokeAsync(new Action(
@@ -74,7 +75,7 @@ namespace CalligraphyTutor.Model
 
         public void ToggleDispatchTimer()
         {
-            Globals.IsStylusDown = !Globals.IsStylusDown;
+            globals.IsStylusDown = !globals.IsStylusDown;
         }
         #endregion
 

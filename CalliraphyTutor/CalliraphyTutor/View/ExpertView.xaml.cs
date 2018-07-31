@@ -23,6 +23,7 @@ namespace CalligraphyTutor.View
         public ExpertView()
         {
             InitializeComponent();
+            
         }
     }
 }

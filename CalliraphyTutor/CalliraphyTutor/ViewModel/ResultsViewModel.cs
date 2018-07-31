@@ -11,7 +11,7 @@ using System.Windows.Input;
 
 namespace CalligraphyTutor.ViewModel
 {
-    class ResultsViewModel: BindableBase
+    public class ResultsViewModel: BindableBase
     {
         #region property
         public ObservableCollection<Point> LineGraphsPoint = new ObservableCollection<Point>();
@@ -27,7 +27,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 expertMax = value;
-                OnPropertyChanged("ExpertMaxText");
+                RaisePropertyChanged("ExpertMaxText");
             }
         }
         private string expertMin = ".";
@@ -37,7 +37,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 expertMin = value;
-                OnPropertyChanged("ExpertMinText");
+                RaisePropertyChanged("ExpertMinText");
             }
         }
         private string studentMax = ".";
@@ -47,7 +47,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 studentMax = value;
-                OnPropertyChanged("StudentMaxText");
+                RaisePropertyChanged("StudentMaxText");
             }
         }
         private string studentMin = ".";
@@ -57,16 +57,53 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 studentMin = value;
-                OnPropertyChanged("StudentMinText");
+                RaisePropertyChanged("StudentMinText");
             }
         }
-
+        StudentViewModel svm;
         #endregion
 
         public ResultsViewModel()
         {
+            svm = new StudentViewModel();
             StudentViewModel.MaxMinChanged += StudentViewModel_MaxMinChanged;
         }
+
+        #region EventsDefiniton
+        public static event EventHandler<EventArgs> ButtonClicked;
+        protected virtual void OnButtonClicked(EventArgs e)
+        {
+            EventHandler<EventArgs> handler =ButtonClicked;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+        #endregion
+
+        #region Button Events
+        private ICommand _buttonClicked;
+        public ICommand CloseButton_clicked
+        {
+            get
+            {
+                _buttonClicked = new RelayCommand(
+                    param => this.HideWindow(),
+                    null
+                    );
+
+                return _buttonClicked;
+            }
+        }
+        private void HideWindow()
+        {
+            Debug.WriteLine("Close pop up");
+            OnButtonClicked(EventArgs.Empty);
+        }
+
+        #endregion
+
+        #region native methods
 
         private void StudentViewModel_MaxMinChanged(object sender, StudentViewModel.MaxMinChangedEventArgs e)
         {
@@ -114,5 +151,7 @@ namespace CalligraphyTutor.ViewModel
             }
             return s;
         }
+
+        #endregion
     }
 }

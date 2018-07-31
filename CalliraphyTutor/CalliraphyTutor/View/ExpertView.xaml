@@ -11,13 +11,13 @@
 
     <Grid Background="#7ec0ee">
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.2*"/>
-            <RowDefinition Height="2.0*"/>
+            <RowDefinition Height="0.4*"/>
+            <RowDefinition Height="1.4*"/>
             <RowDefinition Height="0.2*"/>
         </Grid.RowDefinitions>
 
         <DockPanel HorizontalAlignment="Center" Grid.Row="0" Margin="5,5,5,5" >
-            <Button Content="ClearStrokes" Command="{Binding ClearButton_clicked}"
+            <Button Content="ClearStrokes" Command="{Binding Path=ClearButton_clicked}"
                         Width="300" Height="40" Margin="5,5,5,5" >
                 <Button.Style>
                     <Style TargetType="Button">
@@ -28,8 +28,8 @@
                 </Button.Style>
             </Button>
 
-            <Button Content="{Binding RecordButtonName}" Command="{Binding RecordButton_clicked}"
-                Width="300" Height="40" Margin="5,5,5,5" >
+            <Button Name="recordbutton" Content="{Binding Path=RecordButtonName, Mode=TwoWay, NotifyOnSourceUpdated=True, UpdateSourceTrigger=PropertyChanged}" Command="{Binding Path=RecordButton_clicked}" 
+                    Width="300" Height="40" Margin="5,5,5,5" >
                 <Button.Style>
                     <Style TargetType="Button">
                         <Setter Property="Background" Value="{Binding Path=RecordButtonColor}"/>
@@ -38,13 +38,14 @@
                     </Style>
                 </Button.Style>
             </Button>
+            <TextBlock Text="{Binding TestNumber}"/>
         </DockPanel>
 
         <Grid Grid.Row="1" VerticalAlignment="Top">
-            <InkCanvas Name="ExpertInkCanvas" Height="300" Strokes="{Binding ExpertStrokes}">
+            <InkCanvas Name="ExpertInkCanvas" Height="300" Strokes="{Binding Path=ExpertStrokes}">
                 <i:Interaction.Triggers>
                     <i:EventTrigger EventName="StylusMove">
-                        <Model:InvokeDelegateCommandAction Command="{Binding ExpertCanvas_OnStylusMoved}"
+                        <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_OnStylusMoved}"
                                                            CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
                     </i:EventTrigger>
                 </i:Interaction.Triggers>

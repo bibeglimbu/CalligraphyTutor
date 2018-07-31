@@ -24,7 +24,6 @@ namespace CalligraphyTutor.Model
 
         CalligraphyDynamicRenderer customRenderer;
         ExpertInkCanvas _expertCanvas;
-        
 
         private Color _c = Colors.Black;
         public Color DefaultColor
@@ -41,6 +40,7 @@ namespace CalligraphyTutor.Model
 
         public StudentInkCanvas()
         {
+            
             _expertCanvas = new ExpertInkCanvas();
             _tempSPCollection = new StylusPointCollection();
             Application.Current.Dispatcher.InvokeAsync(new Action(

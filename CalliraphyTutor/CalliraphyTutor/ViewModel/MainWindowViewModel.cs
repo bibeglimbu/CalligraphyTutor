@@ -1,17 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Navigation;
-
-using CalligraphyTutor.View;
 using CalligraphyTutor.Model;
-using CalligraphyTutor.ViewModel;
-using System.Diagnostics;
 
 namespace CalligraphyTutor.ViewModel
 {
-    class MainWindowViewModel: BindableBase 
+    public class MainWindowViewModel: BindableBase 
     {
         private int _screenWidth = (int)SystemParameters.PrimaryScreenWidth;
         public int ScreenWidth
@@ -20,7 +16,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _screenWidth = value;
-                OnPropertyChanged("ScreenWidth");
+                RaisePropertyChanged("ScreenWidth");
             }
         }
 
@@ -31,12 +27,25 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _screenHeight = value;
-                OnPropertyChanged("ScreenHeight");
+                RaisePropertyChanged("ScreenHeight");
             }
         }
 
-        private ExpertViewModel expertViewModel = new ExpertViewModel();
-        private StudentViewModel studentViewModel = new StudentViewModel();
+        private string _debugText = "DebugText ";
+        public string DebugText
+        {
+            get { return _debugText; }
+            set
+            {
+               _debugText += "\r\n" + value;
+                RaisePropertyChanged("DebugText");
+            }
+        }
+
+        public class DebugEventArgs : EventArgs
+        {
+            public string message { get; set; }
+        }
 
         private BindableBase _CurrentViewModel;
         public BindableBase CurrentViewModel
@@ -45,11 +54,24 @@ namespace CalligraphyTutor.ViewModel
             set { SetProperty(ref _CurrentViewModel, value); }
         }
 
+        //private UserControlViewModels UCVW;
+        private ExpertViewModel expertViewModel;
+        private StudentViewModel studentViewModel;
+        LearningHubManager lhManager;
+        private Globals globals;
+
         public MainWindowViewModel()
         {
-            HubConnector.StartConnection();
+            globals = Globals.Instance;
+            lhManager = LearningHubManager.Instance;
+            lhManager.DebugReceived += LhManager_DebugReceived;
             CurrentViewModel = this;
         }
+
+
+
+        //assign all the variables here for recording
+
 
         private ICommand _buttonClicked;
         public ICommand ExpertButton_clicked
@@ -64,7 +86,6 @@ namespace CalligraphyTutor.ViewModel
                 return _buttonClicked;
             }
         }
-
         public ICommand StudentButton_clicked
         {
             get
@@ -77,16 +98,37 @@ namespace CalligraphyTutor.ViewModel
                 return _buttonClicked;
             }
         }
+        public ICommand CloseButton_clicked
+        {
+            get
+            {
+                _buttonClicked = new RelayCommand(
+                    param => this.CloseApplication(param),
+                    null
+                    );
+
+                return _buttonClicked;
+            }
+        }
+
+        private void CloseApplication(Object window)
+        {
+            ((Window)window).Close();
+        }
 
         public void OnNav(string destination)
         {
-
+            DebugText = "Current ViewModel changed ";
             switch (destination)
             {
                 case "Expert":
+                    expertViewModel = new ExpertViewModel();
+                    expertViewModel.DebugReceived += ExpertViewModel_DebugReceived;
                     CurrentViewModel = expertViewModel;
                     break;
                 case "Student":
+                    studentViewModel = new StudentViewModel();
+                    studentViewModel.DebugReceived += StudentViewModel_DebugReceived;
                     CurrentViewModel = studentViewModel;
                     break;
                 case "MainWindow":
@@ -94,6 +136,20 @@ namespace CalligraphyTutor.ViewModel
                     CurrentViewModel = this;
                     break;
             }
+        }
+
+        private void StudentViewModel_DebugReceived(object sender, StudentViewModel.DebugEventArgs e)
+        {
+            DebugText = e.message;
+        }
+
+        private void ExpertViewModel_DebugReceived(object sender, ExpertViewModel.DebugEventArgs e)
+        {
+            DebugText = e.message;
+        }
+        private void LhManager_DebugReceived(object sender, LearningHubManager.DebugEventArgs e)
+        {
+            DebugText = e.message;
         }
     }
 }

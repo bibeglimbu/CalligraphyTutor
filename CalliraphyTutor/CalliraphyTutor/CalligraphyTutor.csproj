@@ -67,12 +67,12 @@
     <Compile Include="Model\DrawingStroke.cs" />
     <Compile Include="Model\ExpertInkCanvas.cs" />
     <Compile Include="Model\FileManager.cs" />
-    <Compile Include="Model\HubConnector.cs" />
     <Compile Include="Model\InvokeDelegateCommandAction.cs" />
     <Compile Include="Model\LoadingStroke.cs" />
     <Compile Include="Model\StudentInkCanvas.cs" />
     <Compile Include="ViewModel\ExpertViewModel.cs" />
     <Compile Include="ViewModel\Globals.cs" />
+    <Compile Include="ViewModel\LearningHubManager.cs" />
     <Compile Include="ViewModel\MainWindowViewModel.cs" />
     <Compile Include="Model\RelayCommand.cs" />
     <Compile Include="ViewModel\ResultsViewModel.cs" />

@@ -1,9 +1,12 @@
 ﻿using CalligraphyTutor.Model;
+using CalligraphyTutor.View;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Speech.Synthesis;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,9 +17,10 @@ using System.Windows.Threading;
 
 namespace CalligraphyTutor.ViewModel
 {
-    class ExpertViewModel: BindableBase
+    public class ExpertViewModel: BindableBase
     {
         #region VARS & Property
+        private Button button = new Button();
         //screen size of the application
         private int _screenWidth = (int)SystemParameters.PrimaryScreenWidth;
         public int ScreenWidth
@@ -25,8 +29,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _screenWidth = value;
-                //NotifyOfPropertyChange(() => ScreenWidth);
-                OnPropertyChanged("ScreenWidth");
+                RaisePropertyChanged();
             }
         }
         private int _screenHeight = (int)SystemParameters.PrimaryScreenHeight;
@@ -36,8 +39,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _screenHeight = value;
-                //NotifyOfPropertyChange(() => ScreenHeight);
-                OnPropertyChanged("ScreenHeight");
+                RaisePropertyChanged();
             }
         }
         //name of the button
@@ -47,8 +49,8 @@ namespace CalligraphyTutor.ViewModel
             get { return _recordButtonName; }
             set
             {
-                _recordButtonName = value;
-                OnPropertyChanged("RecordButtonName");
+                    _recordButtonName = value;
+                    RaisePropertyChanged();
             }
         }
         //color of the button
@@ -58,8 +60,8 @@ namespace CalligraphyTutor.ViewModel
             get { return brush; }
             set
             {
-                brush = value;
-                OnPropertyChanged("RecordButtonColor");
+                    brush = value;
+                    RaisePropertyChanged();
             }
         }
 
@@ -69,38 +71,113 @@ namespace CalligraphyTutor.ViewModel
             get { return _expertStrokes; }
             set
             {
-                _expertStrokes = value;
-                OnPropertyChanged("RecordButtonColor");
+                    _expertStrokes = value;
+                    RaisePropertyChanged();
             }
         }
 
+        private DispatcherTimer _timer = new DispatcherTimer();
+        public DispatcherTimer UpdateTimer
+        {
+            get { return _timer; }
+            set
+            {
+                _timer = value;
+                RaisePropertyChanged("UpdateTimer");
+            }
+        }
+        private int _text = 0;
+        public int TestNumber
+        {
+            get { return _text; }
+            set
+            {
+                _text = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        LearningHubManager LHManager;
+        Globals globals;
+
+        public event EventHandler<DebugEventArgs> DebugReceived;
+        protected virtual void OnDebugReceived(DebugEventArgs e)
+        {
+            EventHandler<DebugEventArgs> handler = DebugReceived;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+
+        public class DebugEventArgs : EventArgs
+        {
+            public string message { get; set; }
+        }
+
+        
         #endregion
 
         public ExpertViewModel()
         {
-            HubConnector.myConnector.startRecordingEvent += MyConnector_startRecordingEvent;
-            HubConnector.myConnector.stopRecordingEvent += MyConnector_stopRecordingEvent;
+            globals = Globals.Instance;
+            LHManager = LearningHubManager.Instance;
+            SetValueNames();
+            LHManager.SendReady();
+            LHManager.StartRecordingEvent += LHManager_StartRecordingEvent;
+            LHManager.StopRecordingEvent += LHManager_StopRecordingEvent;
+
+            UpdateTimer.Interval = new TimeSpan(1000);
+            UpdateTimer.Tick += UpdateTimer_Tick;
+
         }
 
-        
+        private void LHManager_StopRecordingEvent(object sender, EventArgs e)
+        {
+            SendDebug( "stop");
+            UpdateTimer.Stop();
+            StartRecordingData();
+        }
+
+        private void LHManager_StartRecordingEvent(object sender, EventArgs e)
+        {
+            SendDebug( "start");
+            UpdateTimer.Start();
+            StartRecordingData();
+        }
+
+        private void UpdateTimer_Tick(object sender, EventArgs e)
+        {
+            CommandManager.InvalidateRequerySuggested();
+            TestNumber += 1;
+            Debug.WriteLine(TestNumber);
+        }
 
         #region Send data
-        public void setValueNames()
+
+
+        private void SetValueNames()
         {
-            List<string> names = new List<string>();
-            names.Add("PenPressure");
-            HubConnector.SetValuesName(names);
+                List<string> names = new List<string>();
+                names.Add("PenPressure");
+                names.Add("Tilt_X");
+                names.Add("Tilt_Y");
+                LHManager.SetValueNames(names);
 
         }
-
-        public void SendData(StylusEventArgs args)
+        private void SendData(StylusEventArgs args)
         {
-            List<string> values = new List<string>();
-            String v = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
-            values.Add(v);
-            //Debug.WriteLine(v);
-            HubConnector.SendData(values);
+                List<string> values = new List<string>();
+                String pressure = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
+                values.Add(pressure);
+                String Xangle = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.XTiltOrientation).ToString();
+                values.Add(Xangle);
+                String Yangle = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.YTiltOrientation).ToString();
+                values.Add(Yangle);
+                //Debug.WriteLine(v);
+                LHManager.StoreFrame(values);
         }
+
         #endregion
 
         #region Methods called by the buttons
@@ -115,20 +192,19 @@ namespace CalligraphyTutor.ViewModel
             get
             {
                 _buttonClicked = new RelayCommand(
-                    param => this.ClearStrokes(),
+                    param => ClearStrokes(),
                     null
                     );
 
                 return _buttonClicked;
             }
         }
-        
         public ICommand RecordButton_clicked
         {
             get
             {
                 _buttonClicked = new RelayCommand(
-                    param => this.StartRecordingData(),
+                    param => StartRecordingData(),
                     null
                     );
 
@@ -136,24 +212,44 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        public void StartRecordingData()
+        private void StartRecordingData()
         {
-
-            if (Globals.IsRecording == false)
+            SendDebug(RecordButtonName.ToString());
+            if (LHManager.ExpertIsRecording.Equals(false))
             {
+                LHManager.ExpertIsRecording = true;
+                Application.Current.Dispatcher.InvokeAsync(new Action(
+                    () =>
+                    {
+                        RecordButtonName = "Stop Recording";
+                        RecordButtonColor = new SolidColorBrush(Colors.Green);
+                    }));
+                if (globals.Speech.State != SynthesizerState.Speaking)
+                {
+                    globals.Speech.SpeakAsync("Expert Is recording" + LHManager.ExpertIsRecording.ToString());
+                }
+                
                 ExpertStrokes.Clear();
-                Globals.IsRecording = true;
-                RecordButtonName = "Stop Recording";
-                RecordButtonColor = new SolidColorBrush(Colors.Green);
+                return;
 
             }
-            else if (Globals.IsRecording == true)
+            else
             {
-                Globals.IsRecording = false;
-                RecordButtonName = "Start Recording";
+                LHManager.ExpertIsRecording = false;
+                Application.Current.Dispatcher.InvokeAsync(new Action(
+                    () =>
+                    {
+                        RecordButtonName = "Start Recording";
+                        RecordButtonColor = new SolidColorBrush(Colors.White);
+                    }));
+                if (globals.Speech.State != SynthesizerState.Speaking)
+                {
+                    globals.Speech.SpeakAsync("Expert Is recording" + LHManager.ExpertIsRecording.ToString());
+                }
+                
                 SaveStrokes();
                 ExpertStrokes.Clear();
-                RecordButtonColor = new SolidColorBrush(Colors.White);
+                return;
             }
         }
 
@@ -161,7 +257,7 @@ namespace CalligraphyTutor.ViewModel
         {
             if (ExpertStrokes.Count != 0)
             {
-                Globals.GlobalFileManager.SaveStroke(ExpertStrokes);
+                globals.GlobalFileManager.SaveStroke(ExpertStrokes);
             }
             else
             {
@@ -172,20 +268,6 @@ namespace CalligraphyTutor.ViewModel
         #endregion
 
         #region Events
-        
-        private void MyConnector_startRecordingEvent(Object sender)
-        {
-            Debug.WriteLine("start");
-            setValueNames();
-            StartRecordingData();
-        }
-
-        private void MyConnector_stopRecordingEvent(Object sender)
-        {
-            Debug.WriteLine("stop");
-            StartRecordingData();
-
-        }
 
         private ICommand _stylusMoved;
         public ICommand ExpertCanvas_OnStylusMoved
@@ -193,7 +275,7 @@ namespace CalligraphyTutor.ViewModel
             get
             {
                 _stylusMoved = new RelayCommand(
-                    param => this.OnStylusMoved(param),
+                    param => OnStylusMoved(param),
                     null
                     );
 
@@ -204,25 +286,46 @@ namespace CalligraphyTutor.ViewModel
         private void OnStylusMoved(object param)
         {
             //run only of 1/4th of a sec has elapsed
-            if ((DateTime.Now - Globals.LastExecution).TotalSeconds >= 0.02)
+            //if ((DateTime.Now - globals.LastExecution).TotalSeconds >= 0.1)
+            //{
+            
+            //send data to learning hub
+
+            if (LHManager.ExpertIsRecording == true)
             {
-                Debug.WriteLine("Globals.IsRecording"+ Globals.IsRecording);
-                //send data to learning hub
-                if (Globals.IsRecording == true)
+                try
                 {
-                    try
-                    {
-                            StylusEventArgs args = (StylusEventArgs)param;
-                            SendData(args);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine(ex.StackTrace);
-                    }
+                    StylusEventArgs args = (StylusEventArgs)param;
+                    SendData(args);
+                    //if(globals.Speech.State != SynthesizerState.Speaking)
+                    //{
+                    //    globals.Speech.SpeakAsync("Expert data sent ");
+                    //}
+                }
+                catch (Exception ex)
+                {
+                      Debug.WriteLine(ex.StackTrace);
                 }
             }
+            else
+            {
+                if (globals.Speech.State != SynthesizerState.Speaking)
+                {
+                    globals.Speech.SpeakAsync("Expert is recording " + LHManager.ExpertIsRecording.ToString());
+                }
+                
+            }
+            //globals.LastExecution = DateTime.Now;
+            //}
 
-            Globals.LastExecution = DateTime.Now;
+            
+        }
+
+        public void SendDebug(string s)
+        {
+            DebugEventArgs args = new DebugEventArgs();
+            args.message = s;
+            OnDebugReceived(args);
         }
         #endregion
     }

@@ -1,24 +1,34 @@
 ﻿using CalligraphyTutor.Model;
 using System;
+using System.Collections.Generic;
+using System.Speech.Synthesis;
 
 namespace CalligraphyTutor.ViewModel
 {
-    public static class Globals
+    public sealed class Globals
     {
-        private static bool _isRecording = false;
-        public static bool IsStylusDown=false;
+        private static readonly Lazy<Globals> lazy = new Lazy<Globals>(() => new Globals());
+        public static Globals Instance { get { return lazy.Value; } }
 
-        public static bool IsRecording
+        private bool _isStylusDown = false;
+        public bool IsStylusDown
         {
-            get { return _isRecording; }
+            get { return _isStylusDown; }
             set
             {
-                _isRecording = value;
+                _isStylusDown = value;
+                
             }
         }
+        private SpeechSynthesizer _speech = new SpeechSynthesizer();
+        public SpeechSynthesizer Speech
+        {
+            get { return _speech; }
+        }
 
-        private static DateTime _lastExecution = DateTime.Now;
-        public static DateTime LastExecution
+
+        private DateTime _lastExecution = DateTime.Now;
+        public DateTime LastExecution
         {
             get { return _lastExecution; }
             set
@@ -27,11 +37,19 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
+
+
         //class for opening and saving to file
-        private static FileManager _fileManager = new FileManager();
-        public static FileManager GlobalFileManager
+        private FileManager _fileManager = new FileManager();
+        public FileManager GlobalFileManager
         {
             get { return _fileManager; }
         }
+
+        private Globals()
+        {
+            _speech.Rate = 2;
+        }
+
     }
 }
