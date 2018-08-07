@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CalligraphyTutor.ViewModel;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -51,6 +52,8 @@ namespace CalligraphyTutor.Model
                 _minPressure = value;
             }
         }
+
+        Globals globals;
         #endregion
 
         public LoadingStroke(StylusPointCollection stylusPoints, Color c)
@@ -58,6 +61,7 @@ namespace CalligraphyTutor.Model
         {
             // Create the Brush afor drawing.
             StrokeColor = c;
+            globals = Globals.Instance;
             AssignMaxMin(stylusPoints);
             //Debug.WriteLine("LoadingStrokes/ MaxPressure: " + MaxPressure + " MinPressure: " + MinPressure);
         }
@@ -79,6 +83,8 @@ namespace CalligraphyTutor.Model
         {
             drawingAttributes.Color = StrokeColor;
             drawingAttributes.IsHighlighter = true;
+            drawingAttributes.Width = globals.StrokeWidth;
+            drawingAttributes.Height = globals.StrokeHeight;
             base.DrawCore(drawingContext, DrawingAttributes);
         }
     }

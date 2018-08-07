@@ -22,7 +22,8 @@ namespace CalligraphyTutor.Model
         //holds the color as the dynamic renderer color can be changed before the stroke is actually created
         private Color _StrokeColor = Colors.Black;
 
-        CalligraphyDynamicRenderer customRenderer;
+        //ExpertCanvasDynamicRenderer customRenderer;
+        StudentCanvasDynamicRenderer studentCustomRenderer;
         ExpertInkCanvas _expertCanvas;
 
         private Color _c = Colors.Black;
@@ -32,7 +33,7 @@ namespace CalligraphyTutor.Model
             set
             {
                 _c = value;
-                customRenderer.DefaultColor = _c;
+                studentCustomRenderer.DefaultColor = _c;
             }
         }
 
@@ -46,9 +47,10 @@ namespace CalligraphyTutor.Model
             Application.Current.Dispatcher.InvokeAsync(new Action(
                     () =>
                     {
-                        customRenderer = new CalligraphyDynamicRenderer();
-                        this.DynamicRenderer = customRenderer;
-                        customRenderer.DynamicRendererBrushChanged += CustomRenderer_DynamicRendererBrushChanged;
+                        studentCustomRenderer = new StudentCanvasDynamicRenderer();
+                        //customRenderer = new StudentCanvasDynamicRenderer();
+                        this.DynamicRenderer = studentCustomRenderer;
+                        studentCustomRenderer.DynamicRendererBrushChanged += CustomRenderer_DynamicRendererBrushChanged;
                     }));
         }
 
@@ -90,7 +92,7 @@ namespace CalligraphyTutor.Model
                 //AddStroke();
                 this.Strokes.Remove(e.Stroke);
                 //using custom renderer color is too late as the Color has already changed due to this method triggered on color change event
-                DrawingStroke customStroke = new DrawingStroke(_tempSPCollection, _StrokeColor);
+                StudentStroke customStroke = new StudentStroke(_tempSPCollection, _StrokeColor);
                 this.Strokes.Add(customStroke);
                 //InkCanvasStrokeCollectedEventArgs args = new InkCanvasStrokeCollectedEventArgs(customStroke);
                 _tempSPCollection = new StylusPointCollection();
@@ -112,7 +114,7 @@ namespace CalligraphyTutor.Model
         private void AddStroke()
         {
 
-            DrawingStroke customStroke = new DrawingStroke(_tempSPCollection, _StrokeColor);
+            LoadingStroke customStroke = new LoadingStroke(_tempSPCollection, _StrokeColor);
             this.Strokes.Add(customStroke);
             //empty the stylusPointcollection
             _tempSPCollection = new StylusPointCollection();

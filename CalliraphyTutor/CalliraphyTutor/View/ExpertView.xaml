@@ -7,7 +7,8 @@
              mc:Ignorable="d"              
              xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
              xmlns:Model="clr-namespace:CalligraphyTutor.Model"
-             DataContext="{StaticResource ExpertViewModel}">
+             DataContext="{StaticResource ExpertViewModel}"
+             Name="ExpertViewControl">
 
     <Grid Background="#7ec0ee">
         <Grid.RowDefinitions>
@@ -42,7 +43,7 @@
         </DockPanel>
 
         <Grid Grid.Row="1" VerticalAlignment="Top">
-            <InkCanvas Name="ExpertInkCanvas" Height="300" Strokes="{Binding Path=ExpertStrokes}">
+            <InkCanvas Height="300" Strokes="{Binding Path=ExpertStrokes}" DefaultDrawingAttributes="{Binding ExpertAttributes}">
                 <i:Interaction.Triggers>
                     <i:EventTrigger EventName="StylusMove">
                         <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_OnStylusMoved}"
@@ -50,6 +51,7 @@
                     </i:EventTrigger>
                 </i:Interaction.Triggers>
             </InkCanvas>
+
 
             <Line Stroke="Black" Grid.Row="1" Height="2" Margin="0,-200,0,0" StrokeThickness="4"
               X1="0" X2="{Binding ScreenWidth}" >

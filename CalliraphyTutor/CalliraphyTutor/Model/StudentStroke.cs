@@ -10,7 +10,7 @@ using System.Windows.Media;
 
 namespace CalligraphyTutor.Model
 {
-    class DrawingStroke : Stroke
+    class StudentStroke: Stroke
     {
         #region vars
         [ThreadStatic]
@@ -49,9 +49,13 @@ namespace CalligraphyTutor.Model
         }
         #endregion
 
-        public DrawingStroke(StylusPointCollection stylusPoints) : base(stylusPoints)
+        public StudentStroke(StylusPointCollection stylusPoints) : base(stylusPoints)
         {
-            StrokeColor = _color;
+            brush = new SolidColorBrush(StrokeColor);
+            pen = new Pen(brush, 5d);
+
+            base.DrawingAttributes.Width = 5d;
+            base.DrawingAttributes.Height = 5d;
 
             MaxPressure = this.StylusPoints[0].GetPropertyValue(StylusPointProperties.NormalPressure);
             MinPressure = MaxPressure;
@@ -67,9 +71,11 @@ namespace CalligraphyTutor.Model
 
         }
 
-        public DrawingStroke(StylusPointCollection stylusPoints, Color c) : base(stylusPoints)
+        public StudentStroke(StylusPointCollection stylusPoints, Color c) : base(stylusPoints)
         {
             StrokeColor = c;
+            brush = new SolidColorBrush(StrokeColor);
+            pen = new Pen(brush, 5d);
             MaxPressure = this.StylusPoints[0].GetPropertyValue(StylusPointProperties.NormalPressure);
             MinPressure = MaxPressure;
 
@@ -84,8 +90,22 @@ namespace CalligraphyTutor.Model
 
         protected override void DrawCore(DrawingContext drawingContext, DrawingAttributes drawingAttributes)
         {
-            drawingAttributes.Color = StrokeColor;
-            base.DrawCore(drawingContext, drawingAttributes);
+
+            // Allocate memory to store the previous point to draw from.
+            Point prevPoint = new Point(double.NegativeInfinity,
+                                    double.NegativeInfinity);
+
+            // Draw linear line between  all the StylusPoints in the Stroke.
+            for (int i = 0; i < this.StylusPoints.Count; i++)
+            {
+
+                pen.Brush.Opacity = brush.Opacity * this.StylusPoints[i].PressureFactor;
+                Point pt = (Point)this.StylusPoints[i];
+                drawingContext.DrawLine(pen, prevPoint, pt);
+                prevPoint = pt;
+
+            }
+
         }
     }
 }

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Speech.Synthesis;
+using System.Windows.Ink;
 
 namespace CalligraphyTutor.ViewModel
 {
@@ -20,6 +21,29 @@ namespace CalligraphyTutor.ViewModel
                 
             }
         }
+
+        private double _strokeWidth = 5d;
+        public double StrokeWidth
+        {
+            get { return _strokeWidth; }
+            set
+            {
+                _strokeWidth = value;
+
+            }
+        }
+
+        private double _strokeHeight = 5d;
+        public double StrokeHeight
+        {
+            get { return _strokeHeight; }
+            set
+            {
+                _strokeHeight = value;
+
+            }
+        }
+
         private SpeechSynthesizer _speech = new SpeechSynthesizer();
         public SpeechSynthesizer Speech
         {

@@ -10,8 +10,8 @@
              DataContext="{StaticResource StudentViewModel}">
     <Grid Background="#7ec0ee" Name="MainGrid">
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.2*"/>
-            <RowDefinition Height="2*"/>
+            <RowDefinition Height="0.4*"/>
+            <RowDefinition Height="1.4*"/>
             <RowDefinition Height="0.2*"/>
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0" HorizontalAlignment="Center">

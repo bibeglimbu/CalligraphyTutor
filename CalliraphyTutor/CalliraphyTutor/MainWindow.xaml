@@ -94,7 +94,7 @@
         </Grid>
 
         <Grid Grid.Row="2" >
-            <TextBox Margin="10,10,10,10" Background="Aquamarine" BorderThickness="0.5" Height="290" 
+            <TextBlock Margin="10,10,10,10" Background="Aquamarine"  Height="290" 
                      Text="{Binding DebugText}"/>
         </Grid>
     </Grid>

@@ -18,18 +18,23 @@ namespace CalligraphyTutor.Model
     class ExpertInkCanvas: InkCanvas
     {
         #region Vars & Properties
-        [ThreadStatic]
-        private Brush _strokeBrush = new SolidColorBrush();
 
         private DispatcherTimer _dispatchTimer = new DispatcherTimer();
         Globals globals;
+
+        //ExpertCanvasDynamicRenderer expertCustomRenderer;
         #endregion
 
         public ExpertInkCanvas(): base()
         {
+            //expertCustomRenderer = new ExpertCanvasDynamicRenderer();
+            //this.DynamicRenderer = expertCustomRenderer;
+
             globals = Globals.Instance;
             _dispatchTimer.Interval = new TimeSpan(10000);
             _dispatchTimer.Tick += _dispatchTimer_Tick;
+            this.DefaultDrawingAttributes.Width = 5d;
+            this.DefaultDrawingAttributes.Height = 5d;
             
         }
 

@@ -65,14 +65,24 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
+        //        public static readonly DependencyProperty ExpertStrokesProperty = DependencyProperty.RegisterAttached(
+        //"ExpertStrokes", typeof(StrokeCollection), typeof(ExpertViewModel), new PropertyMetadata());
+
+        //        public StrokeCollection ExpertStrokes
+        //        {
+        //            get { return (StrokeCollection)GetValue(ExpertStrokesProperty); }
+        //            set { SetValue(ExpertStrokesProperty, value); }
+        //        }
+
         private StrokeCollection _expertStrokes = new StrokeCollection();
         public StrokeCollection ExpertStrokes
         {
             get { return _expertStrokes; }
             set
             {
-                    _expertStrokes = value;
-                    RaisePropertyChanged();
+                Debug.WriteLine("ExpertStroke added");
+                _expertStrokes = value;
+                RaisePropertyChanged();
             }
         }
 
@@ -93,6 +103,18 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _text = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private DrawingAttributes _expertAttributes = new DrawingAttributes();
+        public DrawingAttributes ExpertAttributes
+        {
+            get { return _expertAttributes; }
+
+            set
+            {
+                _expertAttributes = value;
                 RaisePropertyChanged();
             }
         }
@@ -126,6 +148,9 @@ namespace CalligraphyTutor.ViewModel
             LHManager.SendReady();
             LHManager.StartRecordingEvent += LHManager_StartRecordingEvent;
             LHManager.StopRecordingEvent += LHManager_StopRecordingEvent;
+
+            ExpertAttributes.Width = 5d;
+            ExpertAttributes.Height = 5d;
 
             UpdateTimer.Interval = new TimeSpan(1000);
             UpdateTimer.Tick += UpdateTimer_Tick;
