@@ -66,10 +66,10 @@
     <Compile Include="Model\ExpertInkCanvas.cs" />
     <Compile Include="Model\FileManager.cs" />
     <Compile Include="Model\InvokeDelegateCommandAction.cs" />
-    <Compile Include="Model\LoadingStroke.cs" />
+    <Compile Include="Model\ExpertCanvasStroke.cs" />
     <Compile Include="Model\StudentCanvasDynamicRenderer.cs" />
     <Compile Include="Model\StudentInkCanvas.cs" />
-    <Compile Include="Model\StudentStroke.cs" />
+    <Compile Include="Model\StudentCanvasStroke.cs" />
     <Compile Include="ViewModel\ExpertViewModel.cs" />
     <Compile Include="ViewModel\Globals.cs" />
     <Compile Include="ViewModel\LearningHubManager.cs" />

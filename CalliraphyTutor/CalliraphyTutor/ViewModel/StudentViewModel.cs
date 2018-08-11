@@ -20,30 +20,17 @@ namespace CalligraphyTutor.ViewModel
     {
         #region Vars & properties
 
-        private int _animationTimer = 0;
-        public int UpdateAnimation
-        {
-            get { return _animationTimer; }
-            set
-            {
-                _animationTimer = value;
-                RaisePropertyChanged("UpdateAnimation");
-            }
-        }
+        /// <summary>
+        /// Frames of the stroke animation
+        /// </summary>
+        private int _updateAnimation = 0;
 
-        //central time for controlling all animtion in student mode
+        /// <summary>
+        /// Timer for controlling all animtion in student mode
+        /// </summary>
         private DispatcherTimer _studentTimer = new DispatcherTimer();
-        public DispatcherTimer StudentTimer
-        {
-            get { return _studentTimer; }
-            set
-            {
-                _studentTimer = value;
-                RaisePropertyChanged("StudentTimer");
-            }
-        }
 
-        //screen size of the application
+        //Helps set the screen size of the application in the view
         private int _screenWidth = (int)SystemParameters.PrimaryScreenWidth;
         public int ScreenWidth
         {
@@ -51,7 +38,6 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _screenWidth = value;
-                //NotifyOfPropertyChange(() => ScreenWidth);
                 RaisePropertyChanged("ScreenWidth");
             }
         }
@@ -62,12 +48,15 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _screenHeight = value;
-                //NotifyOfPropertyChange(() => ScreenHeight);
+
                 RaisePropertyChanged("ScreenHeight");
             }
         }
-        //name of the button
+        
         private string _recordButtonName = "Start Recording";
+        /// <summary>
+        /// Text to be displayed on the dynamic button
+        /// </summary>
         public String RecordButtonName
         {
             get { return _recordButtonName; }
@@ -77,8 +66,11 @@ namespace CalligraphyTutor.ViewModel
                 RaisePropertyChanged("RecordButtonName");
             }
         }
-        //color of the button
+        
         private Brush _brushColor = new SolidColorBrush(Colors.White);
+        /// <summary>
+        /// Color of the button for chaning the color based on the state
+        /// </summary>
         public Brush RecordButtonColor
         {
             get { return _brushColor; }
@@ -91,6 +83,9 @@ namespace CalligraphyTutor.ViewModel
 
         private StrokeCollection _studentStrokes = new StrokeCollection();
         private StrokeCollection _expertStrokes = new StrokeCollection();
+        /// <summary>
+        /// StrokeCollection that binds to the Strokes of the StudentInkCanvas Strokes property.
+        /// </summary>
         public StrokeCollection StudentStrokes
         {
             get { return _studentStrokes; }
@@ -100,6 +95,9 @@ namespace CalligraphyTutor.ViewModel
                 RaisePropertyChanged("StudentStrokes");
             }
         }
+        /// <summary>
+        /// StrokeCollection that binds to the ExpertStrokes of the ExpertInkCanvas Strokes property.
+        /// </summary>
         public StrokeCollection ExpertStrokes
         {
             get { return _expertStrokes; }
@@ -111,6 +109,9 @@ namespace CalligraphyTutor.ViewModel
         }
 
         private static bool _expertStrokesLoaded = false;
+        /// <summary>
+        /// Indicates if the <see cref="ExpertStrokes"/> has been loaded or not.
+        /// </summary>
         public static bool ExpertStrokeLoaded
         {
             get { return _expertStrokesLoaded; }
@@ -121,6 +122,9 @@ namespace CalligraphyTutor.ViewModel
         }
         //var for turning the pop up on and off
         private bool _stayOpen = false;
+        /// <summary>
+        /// Indicates if the <see cref="ResultsViewModel"/> is open or not.
+        /// </summary>
         public bool StayOpen
         {
             get { return _stayOpen; }
@@ -131,11 +135,10 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-
-
-        Globals globals;
-
         private bool _isRecording = false;
+        /// <summary>
+        /// Indicates if the data is being sent to the Learning hub.
+        /// </summary>
         public bool StudentIsRecording
         {
             get { return _isRecording; }
@@ -144,36 +147,30 @@ namespace CalligraphyTutor.ViewModel
                 _isRecording = value;
             }
         }
+
+        Globals globals;
         #endregion
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
         public StudentViewModel()
         {
 
             globals = Globals.Instance;
-            StudentTimer.Interval = new TimeSpan(10000);
-            StudentTimer.Tick += AnimationTimer_Tick;
+            _studentTimer.Interval = new TimeSpan(10000);
+            _studentTimer.Tick += AnimationTimer_Tick;
 
             ResultsViewModel.ButtonClicked += ResultsViewModel_ButtonClicked;
-
+            //assign the variables to be rorded in the learning hub
             setValueNames();
-        }
-
-        private void setValueNames()
-        {
-            List<string> names = new List<string>();
-            names.Add("PenPressure");
-            names.Add("Tilt_X");
-            names.Add("Tilt_Y");
-            //myConnector.setValuesName(names);
-        }
-
-        private void ResultsViewModel_ButtonClicked(object sender, EventArgs e)
-        {
-            StayOpen = false;
         }
 
         #region Events Definition
 
+        /// <summary>
+        /// Event for publishing the debug message to be displayed in the Main window debug box.
+        /// </summary>
         public event EventHandler<DebugEventArgs> DebugReceived;
         protected virtual void OnDebugReceived(DebugEventArgs e)
         {
@@ -183,12 +180,14 @@ namespace CalligraphyTutor.ViewModel
                 handler(this, e);
             }
         }
-
         public class DebugEventArgs : EventArgs
         {
             public string message { get; set; }
         }
 
+        /// <summary>
+        /// Event raised when the Max Min value of the current stroke changes
+        /// </summary>
         public static event EventHandler<MaxMinChangedEventArgs> MaxMinChanged;
         protected virtual void OnMaxMinchanged(MaxMinChangedEventArgs e)
         {
@@ -208,7 +207,21 @@ namespace CalligraphyTutor.ViewModel
         }
         #endregion
 
-        #region Events
+        #region EventHandlers
+        /// <summary>
+        /// Event handler which toggles the <see cref="StayOpen"/> on and off.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ResultsViewModel_ButtonClicked(object sender, EventArgs e)
+        {
+            StayOpen = false;
+        }
+        /// <summary>
+        /// Event handler for receiving feedback from the <see cref="LearningHubManager"/>
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="feedback"></param>
         private void MyFeedback_feedbackReceivedEvent(object sender, string feedback)
         {
             if (globals.Speech.State != SynthesizerState.Speaking)
@@ -217,27 +230,29 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        private void ReadStream(String s)
-        {
-            if (s.Contains("Read"))
-            {
-                s.Remove(0, 4);
-                globals.Speech.SpeakAsync("Grip the pen gently");
-               
-            }
-
-        }
-        //Method called everytime the timer is updated
+        /// <summary>
+        /// Event handler for everytime the timer is updated
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void AnimationTimer_Tick(object sender, EventArgs e)
         {
-            UpdateAnimation += 1;
+            _updateAnimation += 1;
         }
 
+        /// <summary>
+        /// Event handler when StartRecordingData message is received from <see cref="LearningHubManager"/>
+        /// </summary>
+        /// <param name="sender"></param>
         private void MyConnector_startRecordingEvent(Object sender)
         {
              StartRecordingData();
         }
 
+        /// <summary>
+        /// Event handler when StopRecordingData message is received from <see cref="LearningHubManager"/>
+        /// </summary>
+        /// <param name="sender"></param>
         private void MyConnector_stopRecordingEvent(Object sender)
         {
                     if (ExpertStrokeLoaded == false)
@@ -248,9 +263,15 @@ namespace CalligraphyTutor.ViewModel
         }
 
 
-        //reference StylusPointCollection used for checking Current partition on hit test.
+        /// <summary>
+        /// Reference StylusPointCollection used for checking Current partition on hit test.
+        /// </summary>
         private StylusPointCollection _tempSPCollectionCurrentPartition = new StylusPointCollection();
         private ICommand _StylusMoved;
+
+        /// <summary>
+        /// Icommand method for binding to the button.
+        /// </summary>
         public ICommand StudentInkCanvas_StylusMoved
         {
             get
@@ -264,62 +285,98 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
+        Point prevPoint = new Point(double.NegativeInfinity, double.NegativeInfinity);
         public void StudentView_OnStylusMoved(Object param)
         {
+
+            //cast the parameter as stylyus event args
             StylusEventArgs args = (StylusEventArgs)param;
             StylusPointCollection spc= args.GetStylusPoints((InkCanvas)args.Source);
+            //if there are not styluspoints exit
+            if (spc.Count == 0)
+                return;
+
+            //get the last point of the collection
             StylusPoint sp= args.GetStylusPoints((InkCanvas)args.Source).Last();
-            //once the expert spc is loaded check the hittest and perform the action.
-           
+
+            //point for calculating hittest only at specific intervals
+            Point pt = spc[0].ToPoint();
+            Vector v = Point.Subtract(prevPoint, pt);
+            //once the expert styluspoints are loaded check the hittest and perform the action.
             if (ExpertStrokeLoaded == true)
             {
-                //send message to hololens
+                //check X angle of the pen
                 if (sp.GetPropertyValue(StylusPointProperties.X) >= 9000 || sp.GetPropertyValue(StylusPointProperties.X) >= 11000)
                 {
                     Debug.WriteLine("Ensure the angle of the pen is roughly 45");
+                    //send feedback to the learning hub if the pens angle is outside the threshold
                     //myConnector.sendFeedback("Ensure the angle of the pen is roughly 45 ");
+
+                    //read out a message
                     globals.Speech.Speak("Ensure the angle of the pen is roughly 45 ");
                 }
 
-                //start saving the sp to the holder
+                //start saving the stylusPoints to the holder
                 _tempSPCollectionCurrentPartition.Add(spc.Reformat(_tempSPCollectionCurrentPartition.Description));
-                Color c = Colors.Black;
-                //start checking for hittest to change color
-                Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new System.Action(
-                    () =>
-                    {
-                        foreach (Stroke s in _expertStrokes)
-                        {
-                            if (HitTestwithExpertStroke(s,args))
-                            {
-                                c = Colors.Black;
-                                //if the color changes then we donot need to run through all the strokes in the expertstroke
-                                //break in order to prevent the color turning blue again
-                                break;
-                            }
-                            else
-                            {
-                                c = Colors.Red;
-                            }
-                        }
-                        ChangeDynamicRendererColor((StudentInkCanvas)args.Source, c);
-                    }));
-
-                //check the partition
-                if (_tempSPCollectionCurrentPartition.Count >= 2)
+                
+                //if the pen has moved a certain distance
+                if(v.Length > 2)
                 {
-                    //int temp = partitionCount;
-                    Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new System.Action(
-                        () =>
+                    //start checking for hittest to change color
+                    foreach (Stroke s in ExpertStrokes)
+                    {
+                        //if the stylus pen hits any of the currrent stroke in the list
+                        if (HitTestwithExpertStroke(s, args))
                         {
-                            CheckPartitionDirection(args);
-                        }));
-                }  
+                            //change the color of the dynamic renderer
+                            ChangeDynamicRendererColor((StudentInkCanvas)args.Source, Colors.Red);
+                            //if the color changes then we donot need to run through all the strokes in the expertstroke
+                            //break in order to prevent the color turning blue again
+                            //SendDebug("Dynamic renderer color changed to red");
+                            break;
+                        }
+
+                        //if none of the strokes return a hit change the color back to black
+                        if (s.Equals(ExpertStrokes.Last()))
+                        {
+                            ChangeDynamicRendererColor((StudentInkCanvas)args.Source, Colors.Black);
+                            SendDebug("Dynamic renderer color changed to black");
+                            break;
+                        }
+                    }
+
+                    //check the partition direction
+                    if (_tempSPCollectionCurrentPartition.Count >= 2)
+                    {
+                        //int temp = partitionCount;
+                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new System.Action(
+                            () =>
+                            {
+                                CheckPartitionDirection(args);
+                            }));
+                    }
+
+                    //reset the point
+                    prevPoint = pt;
+                }
+                
+ 
             }
         }
         #endregion
 
         #region Send data
+        /// <summary>
+        /// Calls the <see cref="LearningHubManager"/>'s SetValueNames method which assigns the variables names for storing
+        /// </summary>
+        private void setValueNames()
+        {
+            List<string> names = new List<string>();
+            names.Add("PenPressure");
+            names.Add("Tilt_X");
+            names.Add("Tilt_Y");
+            //myConnector.setValuesName(names);
+        }
 
         private void SendData(StylusEventArgs args)
         {
@@ -354,7 +411,7 @@ namespace CalligraphyTutor.ViewModel
             ExpertStrokes = new StrokeCollection(globals.GlobalFileManager.LoadStroke());
             ExpertStrokeLoaded = true;
             //start the timer
-            //StudentTimer.Start();
+            //_studentTimer.Start();
         }
         public ICommand LoadButton_clicked
         {
@@ -407,6 +464,22 @@ namespace CalligraphyTutor.ViewModel
         #endregion
 
         #region Native methods
+
+        /// <summary>
+        /// Method for reading out a string
+        /// </summary>
+        /// <param name="s"></param>
+        private void ReadStream(String s)
+        {
+            if (s.Contains("Read"))
+            {
+                s.Remove(0, 4);
+                globals.Speech.SpeakAsync("Grip the pen gently");
+
+            }
+
+        }
+
         //initialize with a third color so the first loop is executed to changed the color
         private Color _tempColor = Colors.Black;
         //states wether the color of the spc has changed in this iteration
@@ -556,12 +629,12 @@ namespace CalligraphyTutor.ViewModel
                     if (globals.Speech.State != SynthesizerState.Speaking)
                     {
                         //check if the student is between the experts range, current issue with the pressure at 4000 level while drawn but changes to 1000 when stroke is created
-                        if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure) / 4 > (((LoadingStroke)_expertStrokes[partitionCount]).MaxPressure + 50))
+                        if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure) / 4 > (((ExpertCanvasStroke)_expertStrokes[partitionCount]).MaxPressure + 50))
                         {
                             new Task(() => globals.Speech.SpeakAsync("Pressure too high")).Start();
                             //Debug.WriteLine("Pressure "+ e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure));
                         }
-                        if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure) / 4 < (((LoadingStroke)_expertStrokes[partitionCount]).MinPressure - 50))
+                        if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure) / 4 < (((ExpertCanvasStroke)_expertStrokes[partitionCount]).MinPressure - 50))
                         {
                             new Task(() => globals.Speech.SpeakAsync("Pressure too low")).Start();
                         }
@@ -582,10 +655,15 @@ namespace CalligraphyTutor.ViewModel
         /// <returns></returns>
         public bool HitTestwithExpertStroke(Stroke expertStroke, StylusEventArgs e)
         {
-            double threshold = 25d;
+            double threshold = 5d;
+
+            //use the first stylus point
+            Point p = e.GetStylusPoints((InkCanvas)e.Source)[0].ToPoint();
+            return expertStroke.HitTest(p, threshold);
+
+            ////use the current position of the stylus pen
             //Point p = e.GetPosition(this); get the position of the stylus
-            return expertStroke.HitTest(e.GetPosition((InkCanvas)e.Source), threshold);
-            //return expertStroke.HitTest(e.GetStylusPoints((StudentInkCanvas)e.Source).First().ToPoint(), threshold);
+            //return expertStroke.HitTest(e.GetPosition((InkCanvas)e.Source), threshold);
         }
 
         /// <summary>
@@ -616,10 +694,10 @@ namespace CalligraphyTutor.ViewModel
             //Debug.WriteLine("Student View model student min: " + minPressure);
 
             //Assign Expert Pressure
-            LoadingStroke ds;
-            if (ExpertStrokes[partitionCount - 1] is LoadingStroke)
+            ExpertCanvasStroke ds;
+            if (ExpertStrokes[partitionCount - 1] is ExpertCanvasStroke)
             {
-                ds = (LoadingStroke)ExpertStrokes[partitionCount - 1];
+                ds = (ExpertCanvasStroke)ExpertStrokes[partitionCount - 1];
                 //ExpertMaxPressure.Add(ds.MaxPressure);
                 //Debug.WriteLine("Student View model expert max: " + ds.MaxPressure);
                 //ExpertMinPressure.Add(ds.MinPressure);
@@ -629,7 +707,7 @@ namespace CalligraphyTutor.ViewModel
             }
             else
             {
-                Debug.WriteLine("ExpertStrokes: "+ (ExpertStrokes[partitionCount - 1] is LoadingStroke));
+                Debug.WriteLine("ExpertStrokes: "+ (ExpertStrokes[partitionCount - 1] is ExpertCanvasStroke));
             }
             OnMaxMinchanged(args);
 

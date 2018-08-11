@@ -14,12 +14,8 @@ namespace CalligraphyTutor.Model
     /// <summary>
     /// Class to render the strokes after the pen is lifted
     /// </summary>
-    class LoadingStroke: Stroke
+    class ExpertCanvasStroke: Stroke
     {
-        [ThreadStatic]
-        private Brush _strokeBrush = new SolidColorBrush();
-        [ThreadStatic]
-        private Pen _strokePen = new Pen();
 
         private Color _strokeColor = Colors.Black;
         public Color StrokeColor
@@ -56,7 +52,7 @@ namespace CalligraphyTutor.Model
         Globals globals;
         #endregion
 
-        public LoadingStroke(StylusPointCollection stylusPoints, Color c)
+        public ExpertCanvasStroke(StylusPointCollection stylusPoints, Color c)
             : base(stylusPoints)
         {
             // Create the Brush afor drawing.
@@ -81,8 +77,8 @@ namespace CalligraphyTutor.Model
 
         protected override void DrawCore(DrawingContext drawingContext, DrawingAttributes drawingAttributes)
         {
-            drawingAttributes.Color = StrokeColor;
-            drawingAttributes.IsHighlighter = true;
+            //drawingAttributes.Color = StrokeColor;
+            drawingAttributes.Color = Color.FromArgb(Convert.ToByte(50*this.StylusPoints[this.StylusPoints.Count/2].PressureFactor), StrokeColor.R, StrokeColor.G, StrokeColor.B);
             drawingAttributes.Width = globals.StrokeWidth;
             drawingAttributes.Height = globals.StrokeHeight;
             base.DrawCore(drawingContext, DrawingAttributes);

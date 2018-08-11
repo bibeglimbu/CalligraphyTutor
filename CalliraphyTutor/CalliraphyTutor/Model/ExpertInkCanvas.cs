@@ -156,7 +156,7 @@ namespace CalligraphyTutor.Model
                             {
                                 c = Colors.Red;
                             }
-                            LoadingStroke s = new LoadingStroke(tempStylusPointCollection, c);
+                            ExpertCanvasStroke s = new ExpertCanvasStroke(tempStylusPointCollection, c);
                             tempStrokeCollection.Add(s);
                             tempStylusPointCollection = new StylusPointCollection();
                             initVector = secVector;
@@ -169,7 +169,7 @@ namespace CalligraphyTutor.Model
                 {
                     if(tempStylusPointCollection.Count != 0)
                     {
-                        LoadingStroke s = new LoadingStroke(tempStylusPointCollection, Colors.Red);
+                        ExpertCanvasStroke s = new ExpertCanvasStroke(tempStylusPointCollection, Colors.Red);
                         tempStrokeCollection.Add(s);
                         tempStylusPointCollection = new StylusPointCollection();
 
@@ -253,7 +253,7 @@ namespace CalligraphyTutor.Model
                             {
                                 Color c = AssignColor(previousDirection);
                                 
-                                LoadingStroke s = new LoadingStroke(tempStylusPointCollection, c);
+                                ExpertCanvasStroke s = new ExpertCanvasStroke(tempStylusPointCollection, c);
                                 tempStrokeCollection.Add(s);
                                 tempStylusPointCollection = new StylusPointCollection();
                                 previousDirection = directionOfSegment;
@@ -269,7 +269,7 @@ namespace CalligraphyTutor.Model
                     if(tempStylusPointCollection.Count != 0)
                     {
                         Color c = AssignColor(previousDirection);
-                        LoadingStroke s = new LoadingStroke(tempStylusPointCollection, c);
+                        ExpertCanvasStroke s = new ExpertCanvasStroke(tempStylusPointCollection, c);
                         tempStrokeCollection.Add(s);
                         tempStylusPointCollection = new StylusPointCollection();
 
