@@ -13,7 +13,7 @@
         WindowStartupLocation="CenterScreen" WindowState="Maximized">
 
     <Window.Resources>
-        <DataTemplate DataType="{x:Type ViewModel:MainWindowViewModel}">
+        <DataTemplate DataType="{x:Type ViewModel:MainViewModel}">
 
             <View:MainWindowView/>
 
@@ -48,7 +48,7 @@
             </Grid.ColumnDefinitions>
             
             <Image VerticalAlignment="Center" Grid.Column="0" 
-                   Source="C:\Users\bib_l\Documents\Programming Repository\CalligraphyTutor\CalliraphyTutor\CalliraphyTutor\Images\OUNL.jpg"/>
+                   Source="C:\Users\bib_l\Documents\Programming Repository\CalligraphyTutor_ExperimentalGroup\CalliraphyTutor\CalliraphyTutor\Images\OUNL.jpg"/>
 
             <StackPanel VerticalAlignment="Center" Grid.Column="2" Margin="0,0,0,0">
 
@@ -94,7 +94,7 @@
         </Grid>
 
         <Grid Grid.Row="2" >
-            <TextBlock Margin="10,10,10,10" Background="Aquamarine"  Height="290" 
+            <TextBlock Margin="10,10,10,10" Background="Aquamarine"  Height="290"   Visibility="Hidden"
                      Text="{Binding DebugText}"/>
         </Grid>
     </Grid>

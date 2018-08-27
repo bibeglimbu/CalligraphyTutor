@@ -135,20 +135,13 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        private bool _isRecording = false;
         /// <summary>
         /// Indicates if the data is being sent to the Learning hub.
         /// </summary>
-        public bool StudentIsRecording
-        {
-            get { return _isRecording; }
-            set
-            {
-                _isRecording = value;
-            }
-        }
+        private bool StudentIsRecording = false;
 
         Globals globals;
+        ConnectorHub.ConnectorHub myConnectorHub;
         #endregion
 
         /// <summary>
@@ -163,7 +156,19 @@ namespace CalligraphyTutor.ViewModel
 
             ResultsViewModel.ButtonClicked += ResultsViewModel_ButtonClicked;
             //assign the variables to be rorded in the learning hub
-            setValueNames();
+            
+        }
+
+        private void MyConnectorHub_stopRecordingEvent(object sender)
+        {
+            globals.Speech.SpeakAsync("stop recording");
+            StartRecordingData();
+        }
+
+        private void MyConnectorHub_startRecordingEvent(object sender)
+        {
+            globals.Speech.SpeakAsync("start recording");
+            StartRecordingData();
         }
 
         #region Events Definition
@@ -224,10 +229,11 @@ namespace CalligraphyTutor.ViewModel
         /// <param name="feedback"></param>
         private void MyFeedback_feedbackReceivedEvent(object sender, string feedback)
         {
-            if (globals.Speech.State != SynthesizerState.Speaking)
-            {
-                ReadStream(feedback);
-            }
+            Debug.WriteLine("Feedback Received");
+            //if (globals.Speech.State != SynthesizerState.Speaking)
+            //{
+            //    //ReadStream(feedback);
+            //}
         }
 
         /// <summary>
@@ -238,28 +244,6 @@ namespace CalligraphyTutor.ViewModel
         private void AnimationTimer_Tick(object sender, EventArgs e)
         {
             _updateAnimation += 1;
-        }
-
-        /// <summary>
-        /// Event handler when StartRecordingData message is received from <see cref="LearningHubManager"/>
-        /// </summary>
-        /// <param name="sender"></param>
-        private void MyConnector_startRecordingEvent(Object sender)
-        {
-             StartRecordingData();
-        }
-
-        /// <summary>
-        /// Event handler when StopRecordingData message is received from <see cref="LearningHubManager"/>
-        /// </summary>
-        /// <param name="sender"></param>
-        private void MyConnector_stopRecordingEvent(Object sender)
-        {
-                    if (ExpertStrokeLoaded == false)
-                    {
-                        LoadStrokes();
-                    }
-                    StartRecordingData();
         }
 
 
@@ -292,9 +276,32 @@ namespace CalligraphyTutor.ViewModel
             //cast the parameter as stylyus event args
             StylusEventArgs args = (StylusEventArgs)param;
             StylusPointCollection spc= args.GetStylusPoints((InkCanvas)args.Source);
+
             //if there are not styluspoints exit
             if (spc.Count == 0)
                 return;
+
+            //send data to learning hub
+            if (this.StudentIsRecording == true)
+            {
+                try
+                {
+                    
+                    SendData(args);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("failed sending data: " + ex.StackTrace);
+                }
+            }
+            else
+            {
+                if(globals.Speech.State != SynthesizerState.Speaking)
+                {
+                    globals.Speech.SpeakAsync("student is Recording"+ this.StudentIsRecording);
+                }
+                
+            }
 
             //get the last point of the collection
             StylusPoint sp= args.GetStylusPoints((InkCanvas)args.Source).Last();
@@ -305,6 +312,7 @@ namespace CalligraphyTutor.ViewModel
             //once the expert styluspoints are loaded check the hittest and perform the action.
             if (ExpertStrokeLoaded == true)
             {
+                
                 //check X angle of the pen
                 if (sp.GetPropertyValue(StylusPointProperties.X) >= 9000 || sp.GetPropertyValue(StylusPointProperties.X) >= 11000)
                 {
@@ -313,7 +321,7 @@ namespace CalligraphyTutor.ViewModel
                     //myConnector.sendFeedback("Ensure the angle of the pen is roughly 45 ");
 
                     //read out a message
-                    globals.Speech.Speak("Ensure the angle of the pen is roughly 45 ");
+                    //globals.Speech.Speak("Ensure the angle of the pen is roughly 45 ");
                 }
 
                 //start saving the stylusPoints to the holder
@@ -340,7 +348,7 @@ namespace CalligraphyTutor.ViewModel
                         if (s.Equals(ExpertStrokes.Last()))
                         {
                             ChangeDynamicRendererColor((StudentInkCanvas)args.Source, Colors.Black);
-                            SendDebug("Dynamic renderer color changed to black");
+                            //SendDebug("Dynamic renderer color changed to black");
                             break;
                         }
                     }
@@ -366,25 +374,53 @@ namespace CalligraphyTutor.ViewModel
         #endregion
 
         #region Send data
+
+        private void initLearningHub()
+        {
+            myConnectorHub = new ConnectorHub.ConnectorHub();
+            myConnectorHub.init();
+            myConnectorHub.sendReady();
+            myConnectorHub.startRecordingEvent += MyConnectorHub_startRecordingEvent;
+            myConnectorHub.stopRecordingEvent += MyConnectorHub_stopRecordingEvent;
+            SetValueNames();
+        }
+
+        public void SaveStrokes()
+        {
+            if (StudentStrokes.Count != 0)
+            {
+                globals.GlobalFileManager.SaveStroke(StudentStrokes);
+            }
+            else
+            {
+                Debug.WriteLine("Number of Student Strokes is: " + StudentStrokes.Count);
+            }
+
+        }
+
         /// <summary>
         /// Calls the <see cref="LearningHubManager"/>'s SetValueNames method which assigns the variables names for storing
         /// </summary>
-        private void setValueNames()
+        private void SetValueNames()
         {
             List<string> names = new List<string>();
             names.Add("PenPressure");
             names.Add("Tilt_X");
             names.Add("Tilt_Y");
-            //myConnector.setValuesName(names);
+            myConnectorHub.setValuesName(names);
         }
 
         private void SendData(StylusEventArgs args)
         {
             List<string> values = new List<string>();
-            String v = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
-            values.Add(v);
-            //Debug.WriteLine(v);
-            //myConnector.storeFrame(values);
+            String penPressure = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
+            values.Add(penPressure);
+            String Tilt_X = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.XTiltOrientation).ToString();
+            values.Add(Tilt_X);
+            String Tilt_Y = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.YTiltOrientation).ToString();
+            values.Add(Tilt_Y);
+            myConnectorHub.storeFrame(values);
+            //globals.Speech.SpeakAsync("Student Data sent");
         }
         #endregion
 
@@ -408,11 +444,15 @@ namespace CalligraphyTutor.ViewModel
         }
         private void LoadStrokes()
         {
+            //when the stroke is loaded initiate the learning hub. Having it in constructors will not work
+            initLearningHub();
+
             ExpertStrokes = new StrokeCollection(globals.GlobalFileManager.LoadStroke());
             ExpertStrokeLoaded = true;
             //start the timer
             //_studentTimer.Start();
         }
+
         public ICommand LoadButton_clicked
         {
             get
@@ -444,23 +484,39 @@ namespace CalligraphyTutor.ViewModel
 
         private void StartRecordingData()
         {
-            if (StudentIsRecording == false)
+            if (this.StudentIsRecording==false)
             {
-                StudentStrokes.Clear();
-                StudentIsRecording = true;
-                RecordButtonName = "Stop Recording";
-                RecordButtonColor = new SolidColorBrush(Colors.Green);
-                StayOpen = false;
+                Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new System.Action(
+                            () =>
+                            {
+                                if (ExpertStrokeLoaded == false)
+                                {
+                                    LoadStrokes();
+                                }
+                                StudentStrokes.Clear();
+                                this.StudentIsRecording = true;
+                                RecordButtonName = "Stop Recording";
+                                RecordButtonColor = new SolidColorBrush(Colors.Green);
+                                StayOpen = false;
+                            }));
+
             }
-            else if (StudentIsRecording == true)
+            else 
             {
-                StudentIsRecording = false;
-                RecordButtonName = "Start Recording";
-                StudentStrokes.Clear();
-                RecordButtonColor = new SolidColorBrush(Colors.White);
-                StayOpen = true;
+                Application.Current.Dispatcher.InvokeAsync(new Action(
+                () =>
+                {
+                    this.StudentIsRecording = false;
+                    RecordButtonName = "Start Recording";
+                    SaveStrokes();
+                    StudentStrokes.Clear();
+                    RecordButtonColor = new SolidColorBrush(Colors.White);
+                    //StayOpen = true;
+                }));
             }
+            //globals.Speech.SpeakAsync("Student is recording "+ this.StudentIsRecording);
         }
+
         #endregion
 
         #region Native methods
@@ -504,7 +560,7 @@ namespace CalligraphyTutor.ViewModel
                 //Debug.WriteLine("Color Changed");
                 if (c == Colors.Red)
                 {
-                    if (StudentIsRecording == true)
+                    if (this.StudentIsRecording == true)
                     {
                         try
                         {
@@ -631,12 +687,13 @@ namespace CalligraphyTutor.ViewModel
                         //check if the student is between the experts range, current issue with the pressure at 4000 level while drawn but changes to 1000 when stroke is created
                         if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure) / 4 > (((ExpertCanvasStroke)_expertStrokes[partitionCount]).MaxPressure + 50))
                         {
-                            new Task(() => globals.Speech.SpeakAsync("Pressure too high")).Start();
-                            //Debug.WriteLine("Pressure "+ e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure));
+                            //new Task(() => globals.Speech.SpeakAsync("Pressure too high")).Start();
+                            Debug.WriteLine("Pressure High"+ e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure));
                         }
                         if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure) / 4 < (((ExpertCanvasStroke)_expertStrokes[partitionCount]).MinPressure - 50))
                         {
-                            new Task(() => globals.Speech.SpeakAsync("Pressure too low")).Start();
+                            //new Task(() => globals.Speech.SpeakAsync("Pressure too low")).Start();
+                            Debug.WriteLine("Pressure Low" + e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure));
                         }
 
                     }

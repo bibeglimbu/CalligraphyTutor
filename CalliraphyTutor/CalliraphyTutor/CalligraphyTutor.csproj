@@ -72,7 +72,7 @@
     <Compile Include="Model\StudentCanvasStroke.cs" />
     <Compile Include="ViewModel\ExpertViewModel.cs" />
     <Compile Include="ViewModel\Globals.cs" />
-    <Compile Include="ViewModel\LearningHubManager.cs" />
+    <Compile Include="ViewModel\MainViewModel.cs" />
     <Compile Include="ViewModel\MainWindowViewModel.cs" />
     <Compile Include="Model\RelayCommand.cs" />
     <Compile Include="ViewModel\ResultsViewModel.cs" />

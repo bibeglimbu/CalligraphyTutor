@@ -49,6 +49,17 @@
                         <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_OnStylusMoved}"
                                                            CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
                     </i:EventTrigger>
+
+                    <i:EventTrigger EventName="StylusInRange">
+                        <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_StylusInRange}"
+                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
+                    </i:EventTrigger>
+
+                    <i:EventTrigger EventName="StrokeCollected">
+                        <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_OnStrokeCollected}"
+                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
+                    </i:EventTrigger>
+                    
                 </i:Interaction.Triggers>
             </InkCanvas>
 
@@ -71,7 +82,7 @@
         </Grid>
 
         <Grid Grid.Row="2" HorizontalAlignment="Center">
-            <TextBlock>Welcome to expert mode</TextBlock>
+            <TextBlock>Welcome to expert mode. Please touch the Screen with your pen first.</TextBlock>
         </Grid>
         
     </Grid>

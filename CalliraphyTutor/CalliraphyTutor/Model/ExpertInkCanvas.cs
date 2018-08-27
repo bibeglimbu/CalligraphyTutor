@@ -21,7 +21,6 @@ namespace CalligraphyTutor.Model
 
         private DispatcherTimer _dispatchTimer = new DispatcherTimer();
         Globals globals;
-
         //ExpertCanvasDynamicRenderer expertCustomRenderer;
         #endregion
 
@@ -286,23 +285,23 @@ namespace CalligraphyTutor.Model
         private Color AssignColor(Direction d)
         {
             //default is less than 90
-            Color c = Colors.Black;
-            if (d == Direction.down)
-            {
-                return c = Colors.Black;
-            }
-            if (d == Direction.left)
-            {
-                return c = Colors.Blue;
-            }
-            if (d  == Direction.up)
-            {
-                return c = Colors.Red;
-            }
-            if (d == Direction.right)
-            {
-                return c = Colors.Green;
-            }
+            Color c = Colors.Green;
+            //if (d == Direction.down)
+            //{
+            //    return c = Colors.Black;
+            //}
+            //if (d == Direction.left)
+            //{
+            //    return c = Colors.Blue;
+            //}
+            //if (d  == Direction.up)
+            //{
+            //    return c = Colors.Red;
+            //}
+            //if (d == Direction.right)
+            //{
+            //    return c = Colors.Green;
+            //}
 
             return c;
         }

@@ -10,6 +10,7 @@
         <localViewModel:ExpertViewModel x:Key="ExpertViewModel" />
         <localViewModel:StudentViewModel x:Key="StudentViewModel" />
         <localViewModel:ResultsViewModel x:Key="ResultsViewModel"/>
+        <localViewModel:MainViewModel x:Key="MainViewModel"/>
 
     </Application.Resources>
 </Application>

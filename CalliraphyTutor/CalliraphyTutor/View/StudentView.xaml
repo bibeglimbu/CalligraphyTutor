@@ -82,7 +82,11 @@
             </Model:StudentInkCanvas>
 
         </Grid>
-        
+
+        <Grid Grid.Row="2" HorizontalAlignment="Center">
+            <TextBlock>Load expert data to begin the session.</TextBlock>
+        </Grid>
+
         <Popup IsOpen="{Binding StayOpen}" Placement="Center">
             <local:Results/>
         </Popup>

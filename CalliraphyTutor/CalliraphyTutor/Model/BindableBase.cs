@@ -104,6 +104,5 @@ namespace CalligraphyTutor.Model
         {
             PropertyChanged?.Invoke(this, args);
         }
-
     }
 }

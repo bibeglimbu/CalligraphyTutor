@@ -57,16 +57,17 @@ namespace CalligraphyTutor.ViewModel
         //private UserControlViewModels UCVW;
         private ExpertViewModel expertViewModel;
         private StudentViewModel studentViewModel;
-        LearningHubManager lhManager;
+        private MainViewModel mainViewModel;
         private Globals globals;
+
 
         public MainWindowViewModel()
         {
             globals = Globals.Instance;
-            lhManager = LearningHubManager.Instance;
-            lhManager.DebugReceived += LhManager_DebugReceived;
-            CurrentViewModel = this;
+            mainViewModel = new MainViewModel();
+            CurrentViewModel = mainViewModel;
         }
+
 
 
 
@@ -119,6 +120,9 @@ namespace CalligraphyTutor.ViewModel
         public void OnNav(string destination)
         {
             DebugText = "Current ViewModel changed ";
+            expertViewModel = null;
+            studentViewModel = null;
+
             switch (destination)
             {
                 case "Expert":
@@ -144,10 +148,6 @@ namespace CalligraphyTutor.ViewModel
         }
 
         private void ExpertViewModel_DebugReceived(object sender, ExpertViewModel.DebugEventArgs e)
-        {
-            DebugText = e.message;
-        }
-        private void LhManager_DebugReceived(object sender, LearningHubManager.DebugEventArgs e)
         {
             DebugText = e.message;
         }
