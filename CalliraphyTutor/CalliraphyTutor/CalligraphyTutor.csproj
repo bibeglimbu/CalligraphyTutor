@@ -64,9 +64,9 @@
     <Compile Include="CustomInkCanvas\StylusPointsDependencyProperty.cs" />
     <Compile Include="Model\BindableBase.cs" />
     <Compile Include="Model\ExpertInkCanvas.cs" />
+    <Compile Include="Model\ExpertStrokes.cs" />
     <Compile Include="Model\FileManager.cs" />
     <Compile Include="Model\InvokeDelegateCommandAction.cs" />
-    <Compile Include="Model\ExpertCanvasStroke.cs" />
     <Compile Include="Model\StudentCanvasDynamicRenderer.cs" />
     <Compile Include="Model\StudentInkCanvas.cs" />
     <Compile Include="Model\StudentCanvasStroke.cs" />

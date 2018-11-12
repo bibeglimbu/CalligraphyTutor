@@ -41,11 +41,8 @@ namespace CalligraphyTutor.Model
                     using (FileStream fs = new FileStream(openFileDialog1.FileName,
                                                        FileMode.Open))
                     {
-                        //inkCanvas.Strokes = new StrokeCollection(fs);
                         _loadedStrokes = new StrokeCollection(fs);
                     }
-                    //fs.Close();
-
                 }
                 return _loadedStrokes;
             }

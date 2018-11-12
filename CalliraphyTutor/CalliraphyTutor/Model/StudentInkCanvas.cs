@@ -19,32 +19,28 @@ namespace CalligraphyTutor.Model
         /// Reference StylusPointCollection used for adding new stroke on hit test.
         /// </summary>
         private StylusPointCollection _tempSPCollection;
-        /// <summary>
-        /// Ensures that the stroke is saved on the consequtive change rather than the immediately
-        /// </summary>
-        private bool _FirstChange = true;
-        /// <summary>
-        /// Holds the color as the dynamic renderer color can be changed before the stroke is actually created
-        /// </summary>
-        private Color _StrokeColor = Colors.Black;
+
         /// <summary>
         /// Custom Renderer for chaning the behaviour of the ink as it is being drawn
         /// </summary>
-        StudentCanvasDynamicRenderer studentCustomRenderer;
-
-        ExpertInkCanvas _expertCanvas;
+        private StudentCanvasDynamicRenderer studentCustomRenderer;
 
         private Color _c = Colors.Black;
         /// <summary>
         /// Property which determines the default color of the stroke
         /// </summary>
-        public Color DefaultColor
+        public Color StrokeColor
         {
             get { return _c; }
             set
             {
                 _c = value;
-                studentCustomRenderer.DefaultColor = _c;
+                //change the dynamic rendere color
+                ColorChangedEventArgs args = new ColorChangedEventArgs();
+                args.color = _c;
+                //Add stroke when color changes
+                AddStroke(_tempSPCollection, _c);
+                OnBrushColorChanged(args);
             }
         }
 
@@ -52,62 +48,59 @@ namespace CalligraphyTutor.Model
         List<DateTime> StrokeTime = new List<DateTime>();
         #endregion
 
+        //declare the class singleton as we only need one instance in a window
+        //private static readonly Lazy<StudentInkCanvas> lazy = new Lazy<StudentInkCanvas>(() => new StudentInkCanvas());
+        //public static StudentInkCanvas Instance { get { return lazy.Value; } }
+
         /// <summary>
         /// Constructor
         /// </summary>
         public StudentInkCanvas()
         {
-            _expertCanvas = new ExpertInkCanvas();
             _tempSPCollection = new StylusPointCollection();
             studentCustomRenderer = new StudentCanvasDynamicRenderer();
             this.DynamicRenderer = studentCustomRenderer;
-            studentCustomRenderer.DynamicRendererBrushChanged += CustomRenderer_DynamicRendererBrushChanged;
         }
 
-        #region events
+        #region events definition
+
         /// <summary>
-        /// Event handler that handles that <see cref="StudentCanvasDynamicRenderer"/> DynamicRendererBrushChanged Event
+        /// Event raised when the pen is lifed or put down. declared it as static as the listening class would only listen to the object.
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void CustomRenderer_DynamicRendererBrushChanged(object sender, EventArgs e)
+        public static event EventHandler PenDownUpEvent;
+        protected virtual void OnPenDownUpEvent(EventArgs  e)
         {
-           
-            if (_FirstChange == true)
+            EventHandler handler = PenDownUpEvent;
+            if (handler != null)
             {
-                _StrokeColor = DefaultColor;
-                //no need to change the  color if its the first time 
-                _FirstChange = false;
-            }
-            else
-            {
-                if (_tempSPCollection.Count >= 2)
-                {
-                    //if the color changes add the stroke to Strokes
-                    AddStroke();
-                    //change the color back to default
-                    _StrokeColor = DefaultColor;
-                }
+                handler(this, e);
             }
         }
 
+        public static event EventHandler<ColorChangedEventArgs> BrushColorChangedEvent;
+        protected virtual void OnBrushColorChanged(ColorChangedEventArgs c)
+        {
+            EventHandler<ColorChangedEventArgs> handler = BrushColorChangedEvent;
+            if (handler != null)
+            {
+                handler(this, c);
+            }
+        }
+        public class ColorChangedEventArgs : EventArgs
+        {
+            public Color color { get; set; }
+        }
+        #endregion
+
+        #region eventHandlers
         protected override void OnStylusDown(StylusDownEventArgs e)
         {
-            //Start/Stop the dispatch timer which stops the animation
-            _expertCanvas.ToggleDispatchTimer();
-            base.OnStylusDown(e);
+            OnPenDownUpEvent(EventArgs.Empty);
         }
 
         protected override void OnStylusUp(StylusEventArgs e)
         {
-            //Start/Stop the dispatch timer which stops the animation
-            _expertCanvas.ToggleDispatchTimer();
-            //if(_tempSPCollection.Count > 2)
-            //{
-            //    AddStroke();
-            //}
-           
-            base.OnStylusUp(e);
+            OnPenDownUpEvent(EventArgs.Empty);
         }
 
         //this event is not raised when stroke object is added programatically but rather when the pen is lifted up
@@ -117,19 +110,9 @@ namespace CalligraphyTutor.Model
             this.Strokes.Remove(e.Stroke);
             if (_tempSPCollection.Count > 2)
             {
-
-                //this.Strokes.Remove(e.Stroke);
-                //using custom renderer color is too late as the Color has already changed due to this method triggered on color change event
-                // StudentCanvasStroke customStroke = new StudentCanvasStroke(_tempSPCollection, _StrokeColor);
-                //this.Strokes.Add(customStroke);
-                //InkCanvasStrokeCollectedEventArgs args = new InkCanvasStrokeCollectedEventArgs(customStroke);
-                //InkCanvasStrokeCollectedEventArgs args = new InkCanvasStrokeCollectedEventArgs(customStroke);
-
-                //add the stroke when the pen is lifted. there is no need to call the base
-
-                AddStroke();
-                //base.OnStrokeCollected(args);
+                AddStroke(_tempSPCollection, StrokeColor);
             }
+            Debug.WriteLine("Strokes Count: " +  this.Strokes.Count);
 
         }
 
@@ -143,13 +126,22 @@ namespace CalligraphyTutor.Model
         #endregion
 
         /// <summary>
-        /// method that uses the _tempStyluspointCollection to create and save stroke
+        /// method that uses the _tempStyluspointCollection to create studentStroke and save stroke in this canvas StrokeCollection
         /// </summary>
-        private void AddStroke()
+        private void AddStroke(StylusPointCollection spc, Color c)
         {
-
-            StudentCanvasStroke customStroke = new StudentCanvasStroke(_tempSPCollection, _StrokeColor);
+            if(spc.Count < 2)
+            {
+                return;
+            }
+            Debug.WriteLine("StudentInkcanvas before: "+spc.Count);
+            //save the stroke temporarily for filtering the data
+            Stroke tempStroke = FilterStrokeData(new Stroke(spc));
+            Debug.WriteLine("StudentInkcanvas after: " + tempStroke.StylusPoints.Count);
+            //convert the stroke into studentcanvasStroke
+            StudentStroke customStroke = new StudentStroke(tempStroke.StylusPoints, c);
             customStroke.AddPropertyData(timestamp,StrokeTime.ToArray());
+            
             this.Strokes.Add(customStroke);
             
             //empty the stylusPointcollection
@@ -157,6 +149,34 @@ namespace CalligraphyTutor.Model
             StrokeTime = new List<DateTime>();
 
             Debug.WriteLine("Stroke added: Total stroke count = " + this.Strokes.Count);
+        }
+
+        Point prevPoint = new Point(double.NegativeInfinity, double.NegativeInfinity);
+        /// <summary>
+        /// Method for removing excess styluspoints from a expert stroke
+        /// </summary>
+        /// <param name="stroke"></param>
+        private Stroke FilterStrokeData(Stroke stroke)
+        {
+            //create a copy of stroke for iterating
+            ExpertStrokes tempStroke = new ExpertStrokes(stroke.StylusPoints);
+            for (int i = 0; i < tempStroke.StylusPoints.Count; i++)
+            {
+                Point pt = tempStroke.StylusPoints[i].ToPoint();
+                Vector v = Point.Subtract(prevPoint, pt);
+
+                if (v.Length < 2)
+                {
+                    tempStroke.StylusPoints.RemoveAt(i);
+                    continue;
+                }
+                else
+                {
+                    prevPoint = pt;
+                }
+
+            }
+            return tempStroke;
         }
     }
 }

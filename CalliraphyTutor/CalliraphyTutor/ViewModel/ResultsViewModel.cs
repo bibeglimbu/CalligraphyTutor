@@ -66,7 +66,6 @@ namespace CalligraphyTutor.ViewModel
         public ResultsViewModel()
         {
             svm = new StudentViewModel();
-            StudentViewModel.MaxMinChanged += StudentViewModel_MaxMinChanged;
         }
 
         #region EventsDefiniton
@@ -104,16 +103,6 @@ namespace CalligraphyTutor.ViewModel
         #endregion
 
         #region native methods
-
-        private void StudentViewModel_MaxMinChanged(object sender, StudentViewModel.MaxMinChangedEventArgs e)
-        {
-            ExpertMaxPressure.Add(e.ExpertMaxPressure);
-            ExpertMinPressure.Add(e.ExpertMinPressure);
-            StudentMaxPressure.Add(e.StudentMaxPressure);
-            StudentMinPressure.Add(e.StudentMinPressure);
-            DrawGraph();
-        }
-
         public void DrawGraph()
         {
             //int x, y;

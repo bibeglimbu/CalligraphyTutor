@@ -108,11 +108,11 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        private static bool _expertStrokesLoaded = false;
+        private bool _expertStrokesLoaded = false;
         /// <summary>
         /// Indicates if the <see cref="ExpertStrokes"/> has been loaded or not.
         /// </summary>
-        public static bool ExpertStrokeLoaded
+        public bool ExpertStrokeLoaded
         {
             get { return _expertStrokesLoaded; }
             set
@@ -121,6 +121,7 @@ namespace CalligraphyTutor.ViewModel
             }
         }
         //var for turning the pop up on and off
+
         private bool _stayOpen = false;
         /// <summary>
         /// Indicates if the <see cref="ResultsViewModel"/> is open or not.
@@ -190,26 +191,7 @@ namespace CalligraphyTutor.ViewModel
             public string message { get; set; }
         }
 
-        /// <summary>
-        /// Event raised when the Max Min value of the current stroke changes
-        /// </summary>
-        public static event EventHandler<MaxMinChangedEventArgs> MaxMinChanged;
-        protected virtual void OnMaxMinchanged(MaxMinChangedEventArgs e)
-        {
-            EventHandler<MaxMinChangedEventArgs> handler = MaxMinChanged;
-            if (handler != null)
-            {
-                handler(this, e);
-            }
-        }
 
-        public class MaxMinChangedEventArgs : EventArgs
-        {
-            public int ExpertMaxPressure { get; set; }
-            public int ExpertMinPressure { get; set; }
-            public int StudentMaxPressure { get; set; }
-            public int StudentMinPressure { get; set; }
-        }
         #endregion
 
         #region EventHandlers
@@ -246,13 +228,7 @@ namespace CalligraphyTutor.ViewModel
             _updateAnimation += 1;
         }
 
-
-        /// <summary>
-        /// Reference StylusPointCollection used for checking Current partition on hit test.
-        /// </summary>
-        private StylusPointCollection _tempSPCollectionCurrentPartition = new StylusPointCollection();
         private ICommand _StylusMoved;
-
         /// <summary>
         /// Icommand method for binding to the button.
         /// </summary>
@@ -268,107 +244,79 @@ namespace CalligraphyTutor.ViewModel
                 return _StylusMoved;
             }
         }
-
-        Point prevPoint = new Point(double.NegativeInfinity, double.NegativeInfinity);
-        public void StudentView_OnStylusMoved(Object param)
+        /// <summary>
+        /// value that holds the last iteration point to calculate the distance. Instantiated 
+        /// </summary>
+        private Point prevPoint = new Point(double.NegativeInfinity, double.NegativeInfinity);
+        private void StudentView_OnStylusMoved(Object param)
         {
 
             //cast the parameter as stylyus event args
             StylusEventArgs args = (StylusEventArgs)param;
-            StylusPointCollection spc= args.GetStylusPoints((InkCanvas)args.Source);
-
-            //if there are not styluspoints exit
-            if (spc.Count == 0)
+            //if there are no styluspoints, exit
+            if (args.GetStylusPoints((InkCanvas)args.Source).Count == 0)
+            {
                 return;
-
-            //send data to learning hub
-            if (this.StudentIsRecording == true)
-            {
-                try
-                {
-                    
-                    SendData(args);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("failed sending data: " + ex.StackTrace);
-                }
             }
-            else
-            {
-                if(globals.Speech.State != SynthesizerState.Speaking)
-                {
-                    globals.Speech.SpeakAsync("student is Recording"+ this.StudentIsRecording);
-                }
                 
-            }
-
-            //get the last point of the collection
-            StylusPoint sp= args.GetStylusPoints((InkCanvas)args.Source).Last();
-
-            //point for calculating hittest only at specific intervals
-            Point pt = spc[0].ToPoint();
-            Vector v = Point.Subtract(prevPoint, pt);
-            //once the expert styluspoints are loaded check the hittest and perform the action.
+            //once the expert styluspoints are loaded
             if (ExpertStrokeLoaded == true)
             {
-                
-                //check X angle of the pen
-                if (sp.GetPropertyValue(StylusPointProperties.X) >= 9000 || sp.GetPropertyValue(StylusPointProperties.X) >= 11000)
-                {
-                    Debug.WriteLine("Ensure the angle of the pen is roughly 45");
-                    //send feedback to the learning hub if the pens angle is outside the threshold
-                    //myConnector.sendFeedback("Ensure the angle of the pen is roughly 45 ");
+                //get the last point of the collection and the refernce expert point for it
+                StylusPoint studentSP = args.GetStylusPoints((InkCanvas)args.Source).Last();
 
-                    //read out a message
-                    //globals.Speech.Speak("Ensure the angle of the pen is roughly 45 ");
-                }
+                //point for looping only at specific intervals
+                //store the last point of the last interval
+                Point pt = studentSP.ToPoint();
+                Vector v = Point.Subtract(prevPoint, pt);
 
-                //start saving the stylusPoints to the holder
-                _tempSPCollectionCurrentPartition.Add(spc.Reformat(_tempSPCollectionCurrentPartition.Description));
-                
                 //if the pen has moved a certain distance
-                if(v.Length > 2)
+                if (v.Length > 2)
                 {
-                    //start checking for hittest to change color
-                    foreach (Stroke s in ExpertStrokes)
-                    {
-                        //if the stylus pen hits any of the currrent stroke in the list
-                        if (HitTestwithExpertStroke(s, args))
+                    //return the stylus point to be used as ref. Hit test is also performed with in this method.
+                    StylusPoint expertSP = SelectExpertPoint(args, ExpertStrokes);
+
+                    //calculate velocity
+                    //StrokeVelocityAsync(args);
+                    //Debug.WriteLine("Velocity : " + velocity.ToString());
+
+                        //check if the student is between the experts range, current issue with the pressure at 4000 level while drawn but changes to 1000 when stroke is created
+                        if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) > expertSP.GetPropertyValue(StylusPointProperties.NormalPressure) + 400)
                         {
-                            //change the color of the dynamic renderer
-                            ChangeDynamicRendererColor((StudentInkCanvas)args.Source, Colors.Red);
-                            //if the color changes then we donot need to run through all the strokes in the expertstroke
-                            //break in order to prevent the color turning blue again
-                            //SendDebug("Dynamic renderer color changed to red");
-                            break;
+                            //new Task(() => globals.Speech.SpeakAsync("Pressure too high")).Start();
+                            Debug.WriteLine("Pressure High" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
+                        }
+                        else if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) < expertSP.GetPropertyValue(StylusPointProperties.NormalPressure) - 400)
+                        {
+                            //new Task(() => globals.Speech.SpeakAsync("Pressure too low")).Start();
+                            Debug.WriteLine("Pressure Low" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
                         }
 
-                        //if none of the strokes return a hit change the color back to black
-                        if (s.Equals(ExpertStrokes.Last()))
-                        {
-                            ChangeDynamicRendererColor((StudentInkCanvas)args.Source, Colors.Black);
-                            //SendDebug("Dynamic renderer color changed to black");
-                            break;
-                        }
-                    }
-
-                    //check the partition direction
-                    if (_tempSPCollectionCurrentPartition.Count >= 2)
-                    {
-                        //int temp = partitionCount;
-                        Application.Current.Dispatcher.Invoke(DispatcherPriority.Background, new System.Action(
-                            () =>
-                            {
-                                CheckPartitionDirection(args);
-                            }));
-                    }
 
                     //reset the point
                     prevPoint = pt;
+
+                    //send data to learning hub
+                    if (this.StudentIsRecording == true)
+                    {
+                        try
+                        {
+                            SendDataAsync(args, expertSP);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine("failed sending data: " + ex.StackTrace);
+                        }
+                    }
+                    else
+                    {
+                        //if (globals.Speech.State != SynthesizerState.Speaking)
+                        //{
+                        //    globals.Speech.SpeakAsync("student is Recording" + this.StudentIsRecording);
+                        //}
+
+                    }
                 }
-                
- 
             }
         }
         #endregion
@@ -407,18 +355,41 @@ namespace CalligraphyTutor.ViewModel
             names.Add("PenPressure");
             names.Add("Tilt_X");
             names.Add("Tilt_Y");
+            names.Add("StrokeDeviation");
+            names.Add("StrokeVelocity");
             myConnectorHub.setValuesName(names);
         }
 
-        private void SendData(StylusEventArgs args)
+        /// <summary>
+        /// For calling the <see cref="SendData(StylusEventArgs, StylusPoint)"/> async
+        /// </summary>
+        /// <param name="args"></param>
+        /// <param name="expertPoint"></param>
+        public async void SendDataAsync(StylusEventArgs args, StylusPoint expertPoint)
+        {
+            await Task.Run(() => { SendData(args, expertPoint); });
+        }
+        /// <summary>
+        /// Method for sending data
+        /// </summary>
+        /// <param name="args"></param>
+        /// <param name="expertPoint"></param>
+        private void SendData(StylusEventArgs args, StylusPoint expertPoint)
         {
             List<string> values = new List<string>();
-            String penPressure = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
-            values.Add(penPressure);
-            String Tilt_X = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.XTiltOrientation).ToString();
-            values.Add(Tilt_X);
-            String Tilt_Y = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.YTiltOrientation).ToString();
-            values.Add(Tilt_Y);
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                String PenPressure = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
+                values.Add(PenPressure);
+                String Tilt_X = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.XTiltOrientation).ToString();
+                values.Add(Tilt_X);
+                String Tilt_Y = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.YTiltOrientation).ToString();
+                values.Add(Tilt_Y);
+                double StrokeDeviation = CalcualteDistance(args.GetStylusPoints((InkCanvas)args.Source).Last().ToPoint(), expertPoint.ToPoint());
+                values.Add(StrokeDeviation.ToString());
+                double StrokeVelocity = CalculateStrokeVelocity(args);
+                values.Add(StrokeVelocity.ToString());
+            }));
             myConnectorHub.storeFrame(values);
             //globals.Speech.SpeakAsync("Student Data sent");
         }
@@ -452,7 +423,6 @@ namespace CalligraphyTutor.ViewModel
             //start the timer
             //_studentTimer.Start();
         }
-
         public ICommand LoadButton_clicked
         {
             get
@@ -481,7 +451,6 @@ namespace CalligraphyTutor.ViewModel
             }
 
         }
-
         private void StartRecordingData()
         {
             if (this.StudentIsRecording==false)
@@ -519,263 +488,123 @@ namespace CalligraphyTutor.ViewModel
 
         #endregion
 
-        #region Native methods
-
         /// <summary>
-        /// Method for reading out a string
+        /// Method to calculate distance
         /// </summary>
-        /// <param name="s"></param>
-        private void ReadStream(String s)
+        /// <param name="startingPoint"></param>
+        /// <param name="finalPoint"></param>
+        /// <returns></returns>
+        public double CalcualteDistance(Point startingPoint, Point finalPoint )
         {
-            if (s.Contains("Read"))
-            {
-                s.Remove(0, 4);
-                globals.Speech.SpeakAsync("Grip the pen gently");
-
-            }
-
+            double distance = Math.Sqrt(Math.Pow(Math.Abs(startingPoint.X - finalPoint.X), 2)
+                    + Math.Pow(Math.Abs(startingPoint.Y - finalPoint.Y), 2));
+            return distance;
         }
 
-        //initialize with a third color so the first loop is executed to changed the color
-        private Color _tempColor = Colors.Black;
-        //states wether the color of the spc has changed in this iteration
-        private bool _strokeColorChanged = false;
         /// <summary>
-        /// change color of the dynamic renderer based on hittest and message myo
+        /// Method for returning the nearest styluspoint in the expert stroke from the point at which the pen is standing.
+        /// </summary>
+        /// <param name="e">stylus args must be sent to cehange the dynamic rederer color</param>
+        /// <param name="SC"></param>
+        /// <returns></returns>
+        private StylusPoint SelectExpertPoint(StylusEventArgs e, StrokeCollection SC)
+        {
+            // Styluspoint that is closest to the current position of the pen
+            StylusPoint refStylusPoint = new StylusPoint();
+            Point point = new Point(double.NegativeInfinity, double.NegativeInfinity);
+            Application.Current.Dispatcher.Invoke(new Action(() => 
+            {
+                point = e.GetStylusPoints((InkCanvas)e.Source).Last().ToPoint();
+            }));
+            
+            // Value for storing the distance from the pen to the closest expert stylus point
+            double _strokeDeviation = -1.0d;
+
+            foreach (Stroke s in SC)
+            {
+                //iterate through all the stylus point
+                foreach (StylusPoint sp in s.StylusPoints)
+                {
+                    //if the point lies exactly on top and hit test returns true, exit the whole loop and return the point.
+                    if (new Rect(sp.X, sp.Y, 10, 10).IntersectsWith(new Rect(point.X, point.Y, 10, 10)))
+                    {
+                        refStylusPoint = sp;
+                        //change the color of the dynamic renderer to black
+                        ChangeStrokeColor(e, Colors.Black);
+                        //return to exit from the whole method
+                        return refStylusPoint;
+                    }
+                    else
+                    {
+                        //set the color to red
+                        ChangeStrokeColor(e, Colors.Red);
+                    }
+                    //calculate the distance from the point to the pen
+                    double tempDisplacement = CalcualteDistance(point, sp.ToPoint());
+                    //if it is the first time the assign value and return
+                    if (_strokeDeviation < 0)
+                    {
+                        _strokeDeviation = tempDisplacement;
+                        refStylusPoint = sp;
+                        continue;
+                    }
+                    //if the new distance is smaller than the previous distance, store the value
+                    if (tempDisplacement < _strokeDeviation)
+                    {
+                        _strokeDeviation = tempDisplacement;
+                        refStylusPoint = sp;
+                    }
+                }
+            }
+            return refStylusPoint;
+        }
+
+        /// <summary>
+        /// Variable that prevents assignment of colors when there is no change of stroke hit state
+        /// </summary>
+        private Color _previousColor = Colors.Black;
+        /// <summary>
+        /// Method for changing color
         /// </summary>
         /// <param name="e"></param>
-        /// <param name="canvas"></param>
-        private void ChangeDynamicRendererColor(StudentInkCanvas canvas, Color c)
+        /// <param name="color"></param>
+        public void ChangeStrokeColor(StylusEventArgs e, Color color)
         {
-            //if the color has changed over the iteration
-            if (_tempColor != c)
-            {
-                _strokeColorChanged = true;
-                _tempColor = c;
-            }
-
-            // send error message to myo
-            if (_strokeColorChanged == true)
-            {
-                //Debug.WriteLine("Color Changed");
-                if (c == Colors.Red)
-                {
-                    if (this.StudentIsRecording == true)
-                    {
-                        try
-                        {
-                            //myConnector.sendFeedback("Myo");
-                            Debug.WriteLine("StudentViewModel: Myo feedback Sent");
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine(ex.StackTrace);
-                        }
-                    }
-
-
-                }
-
-                canvas.DefaultColor = c;
-                _strokeColorChanged = false;
-            }
-
-        }
-
-        private int partitionCount = 0;
-        double tempSegmentLength = 0;
-        double minSegmentLength = 20d;
-        //holder for checking the tempsegment length
-        StylusPointCollection spc = new StylusPointCollection();
-        enum Direction { right, left, up, down, intialDirection };
-        Direction previousDirection = Direction.intialDirection;
-        /// <summary>
-        /// partitions the spc into smallers strokes to store them based on the direction.
-        /// </summary>
-        /// <param name="stroke"></param>
-        /// <returns></returns>
-        private void CheckPartitionDirection(StylusEventArgs e)
-        {
-            //if e has no stylus points, return
-            if (e.GetStylusPoints((StudentInkCanvas)e.Source).Count == 0)
+            if(color == _previousColor)
             {
                 return;
             }
-            //if e has points add them to spc for holding
-            spc.Add(e.GetStylusPoints((StudentInkCanvas)e.Source).Reformat(spc.Description));
+            ((StudentInkCanvas)e.Source).StrokeColor = color;
+            _previousColor = color;
+        }
 
-            //declare distance holder between each first SP in spc
-            Direction directionOfSegment;
-
-            //calculate the distance of the spc
-            tempSegmentLength = Math.Sqrt((Math.Pow(spc[spc.Count-1].X - spc[0].X, 2) +
-                    Math.Pow(spc[spc.Count - 1].Y - spc[0].Y, 2)));
-            //if spc.distance is larger than the minsegmentlenght
-            if (tempSegmentLength >= minSegmentLength)
+        private Point initVelocityPoint;
+        private DateTime initVelocityTime;
+        /// <summary>
+        /// calculates the velocity of the stroke in seconds
+        /// </summary>
+        public double CalculateStrokeVelocity(StylusEventArgs e)
+        {
+            Point finalVelocityPoint = new Point();
+            Application.Current.Dispatcher.Invoke(new Action(() =>
             {
-                //reset the distance measring variables
-                tempSegmentLength = 0;
-                spc = new StylusPointCollection();
-                //if(e has less than 2 points return)
-                if (e.GetStylusPoints((StudentInkCanvas)e.Source).Count < 2)
+                if (initVelocityPoint == null || initVelocityTime == null)
                 {
+                    initVelocityPoint = e.StylusDevice.GetPosition((StudentInkCanvas)e.Source);
+                    initVelocityTime = DateTime.Now;
                     return;
                 }
+                finalVelocityPoint = e.StylusDevice.GetPosition((StudentInkCanvas)e.Source);
+            }));
+            DateTime finalVelocityTime = DateTime.Now;
 
-                //calculate the direction from the last 2 points
-                if (System.Math.Abs(e.GetStylusPoints((StudentInkCanvas)e.Source)[e.GetStylusPoints((StudentInkCanvas)e.Source).Count - 1].X - e.GetStylusPoints((StudentInkCanvas)e.Source)[e.GetStylusPoints((StudentInkCanvas)e.Source).Count-2].X) >
-                        System.Math.Abs(e.GetStylusPoints((StudentInkCanvas)e.Source)[e.GetStylusPoints((StudentInkCanvas)e.Source).Count - 1].Y - e.GetStylusPoints((StudentInkCanvas)e.Source)[e.GetStylusPoints((StudentInkCanvas)e.Source).Count - 2].Y))
-                {
-                    // change in x is greater, now find left or right
-                    if ((e.GetStylusPoints((StudentInkCanvas)e.Source)[e.GetStylusPoints((StudentInkCanvas)e.Source).Count - 2].X - e.GetStylusPoints((StudentInkCanvas)e.Source)[e.GetStylusPoints((StudentInkCanvas)e.Source).Count - 1].X) < 0)
-                    {
-                            directionOfSegment = Direction.right;
-                    }
-                    else
-                    {
-                            directionOfSegment = Direction.left;
-                    }
-                }
-                else
-                {
-                    // change in y is greater, now find up or down
-                    if ((e.GetStylusPoints((StudentInkCanvas)e.Source)[e.GetStylusPoints((StudentInkCanvas)e.Source).Count - 2].Y - e.GetStylusPoints((StudentInkCanvas)e.Source)[e.GetStylusPoints((StudentInkCanvas)e.Source).Count - 1].Y) < 0)
-                    {
-                            directionOfSegment = Direction.down;
-                    }
-                    else
-                    {
-                            directionOfSegment = Direction.up;
-                    }
-                }
-                //if its the first time direction is assigned.
-                if (previousDirection.Equals(Direction.intialDirection))
-                {
-                    previousDirection = directionOfSegment;
-                    return;
-                }
-                //if its not the firs time compare to see if the direction has changed
-                if (directionOfSegment != previousDirection)
-                {
-                    Debug.WriteLine("Student : Previous Direction: " + previousDirection);
-                    //if _tempSPCollection is not empty
-                    if (_tempSPCollectionCurrentPartition.Count > 1)
-                    {
-                        //start new partition
-                        partitionCount += 1;
-                        //synthesizer.Speak("Partition changed");
-                        Debug.WriteLine(partitionCount);
-                        //save the max min pressure only if the expert data is already loaded.
-                        SaveMaxMin(_tempSPCollectionCurrentPartition, partitionCount);
-                        //empty the _tempSPCollection
-                        _tempSPCollectionCurrentPartition = new StylusPointCollection();
-                        //assign the new Direction as the previous direction
-                        previousDirection = directionOfSegment;
-                    }
-                }
+            double velocity = Math.Sqrt(Math.Pow(Math.Abs(finalVelocityPoint.X - initVelocityPoint.X), 2) + Math.Pow(Math.Abs(finalVelocityPoint.Y - initVelocityPoint.Y), 2)) 
+                / (finalVelocityTime - initVelocityTime).Milliseconds;
+            initVelocityPoint = finalVelocityPoint;
+            initVelocityTime = finalVelocityTime;
 
-                //if the partition count has exceded the no of expert partitions reset it.
-                if (partitionCount >= ExpertStrokes.Count)
-                {
-                    partitionCount = 0;
-                }
-
-                if ((DateTime.Now - globals.LastExecution).TotalSeconds > 0.5)
-                {
-                    if (globals.Speech.State != SynthesizerState.Speaking)
-                    {
-                        //check if the student is between the experts range, current issue with the pressure at 4000 level while drawn but changes to 1000 when stroke is created
-                        if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure) / 4 > (((ExpertCanvasStroke)_expertStrokes[partitionCount]).MaxPressure + 50))
-                        {
-                            //new Task(() => globals.Speech.SpeakAsync("Pressure too high")).Start();
-                            Debug.WriteLine("Pressure High"+ e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure));
-                        }
-                        if (e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure) / 4 < (((ExpertCanvasStroke)_expertStrokes[partitionCount]).MinPressure - 50))
-                        {
-                            //new Task(() => globals.Speech.SpeakAsync("Pressure too low")).Start();
-                            Debug.WriteLine("Pressure Low" + e.GetStylusPoints(((StudentInkCanvas)e.Source)).Last().GetPropertyValue(StylusPointProperties.NormalPressure));
-                        }
-
-                    }
-
-                    globals.LastExecution = DateTime.Now;
-                }
-            }
-
-        }
-
-        /// <summary>
-        /// Checks if the current stylus points collides with the expertStroke
-        /// </summary>
-        /// <param name="expertStroke"></param>
-        /// <param name="e"></param>
-        /// <returns></returns>
-        public bool HitTestwithExpertStroke(Stroke expertStroke, StylusEventArgs e)
-        {
-            double threshold = 5d;
-
-            //use the first stylus point
-            Point p = e.GetStylusPoints((InkCanvas)e.Source)[0].ToPoint();
-            return expertStroke.HitTest(p, threshold);
-
-            ////use the current position of the stylus pen
-            //Point p = e.GetPosition(this); get the position of the stylus
-            //return expertStroke.HitTest(e.GetPosition((InkCanvas)e.Source), threshold);
-        }
-
-        /// <summary>
-        /// saves the max and min values of the student spc in results view model
-        /// </summary>
-        /// <param name="s"></param>
-        private void SaveMaxMin(StylusPointCollection s, int partitionCount)
-        {
-
-            int maxPressure;
-            int minPressure;
-            MaxMinChangedEventArgs args = new MaxMinChangedEventArgs();
-            maxPressure = s[0].GetPropertyValue(StylusPointProperties.NormalPressure);
-            minPressure = maxPressure;
-            //assign student MaxMin
-            foreach (StylusPoint sp in s)
-            {
-                int temp = sp.GetPropertyValue(StylusPointProperties.NormalPressure);
-                maxPressure = Math.Max(temp, maxPressure);
-                minPressure = Math.Min(temp, minPressure);
-            }
-            args.StudentMaxPressure = maxPressure;
-            args.StudentMinPressure = minPressure;
-            //save average rather than max min in the student spc
-            //StudentMaxPressure.Add(maxPressure);
-            //Debug.WriteLine("Student View model student max: " + maxPressure);
-            //StudentMinPressure.Add(minPressure);
-            //Debug.WriteLine("Student View model student min: " + minPressure);
-
-            //Assign Expert Pressure
-            ExpertCanvasStroke ds;
-            if (ExpertStrokes[partitionCount - 1] is ExpertCanvasStroke)
-            {
-                ds = (ExpertCanvasStroke)ExpertStrokes[partitionCount - 1];
-                //ExpertMaxPressure.Add(ds.MaxPressure);
-                //Debug.WriteLine("Student View model expert max: " + ds.MaxPressure);
-                //ExpertMinPressure.Add(ds.MinPressure);
-                //Debug.WriteLine("Student View model expert min: " + ds.MinPressure);
-                args.ExpertMaxPressure = ds.MaxPressure;
-                args.ExpertMinPressure = ds.MinPressure;
-            }
-            else
-            {
-                Debug.WriteLine("ExpertStrokes: "+ (ExpertStrokes[partitionCount - 1] is ExpertCanvasStroke));
-            }
-            OnMaxMinchanged(args);
-
-        }
-        #endregion
-
-        public void SendDebug(string s)
-        {
-            DebugEventArgs args = new DebugEventArgs();
-            args.message = s;
-            OnDebugReceived(args);
+            return velocity;
+            
         }
     }
 }

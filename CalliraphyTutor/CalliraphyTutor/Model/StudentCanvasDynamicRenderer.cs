@@ -20,23 +20,20 @@ namespace CalligraphyTutor.Model
             set
             {
                 _c = value;
-                OnDynamicRendererBrushchanged(EventArgs.Empty);
             }
         }
 
         #endregion
 
-        #region events
-        public event EventHandler<EventArgs> DynamicRendererBrushChanged;
-        protected virtual void OnDynamicRendererBrushchanged(EventArgs e)
+        public StudentCanvasDynamicRenderer()
         {
-            EventHandler<EventArgs> handler = DynamicRendererBrushChanged;
-            if (handler != null)
-            {
-                handler(this, e);
-            }
+            StudentInkCanvas.BrushColorChangedEvent += Canvas_BrushColorChangedEvent;
         }
-        #endregion
+
+        private void Canvas_BrushColorChangedEvent(object sender, StudentInkCanvas.ColorChangedEventArgs e)
+        {
+            DefaultColor = e.color;
+        }
 
         protected override void OnDraw(DrawingContext drawingContext, StylusPointCollection stylusPoints,
                                        Geometry geometry, Brush fillBrush)
@@ -44,7 +41,7 @@ namespace CalligraphyTutor.Model
             for (int i = 0; i < stylusPoints.Count; i++)
             {
                     fillBrush = new SolidColorBrush(DefaultColor);
-                    fillBrush.Opacity *= stylusPoints[i].PressureFactor;
+                    //fillBrush.Opacity *= stylusPoints[i].PressureFactor;
                     base.OnDraw(drawingContext, stylusPoints, geometry, fillBrush);
             }
 
