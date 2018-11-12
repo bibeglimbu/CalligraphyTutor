@@ -10,7 +10,7 @@ using System.Windows.Media;
 
 namespace CalligraphyTutor.Model
 {
-    class StudentCanvasDynamicRenderer: DynamicRenderer
+    class StudentDynamicRenderer: DynamicRenderer
     {
         #region Vars & properties
         private Color _c = Colors.Black;
@@ -25,7 +25,7 @@ namespace CalligraphyTutor.Model
 
         #endregion
 
-        public StudentCanvasDynamicRenderer()
+        public StudentDynamicRenderer()
         {
             StudentInkCanvas.BrushColorChangedEvent += Canvas_BrushColorChangedEvent;
         }
@@ -38,13 +38,8 @@ namespace CalligraphyTutor.Model
         protected override void OnDraw(DrawingContext drawingContext, StylusPointCollection stylusPoints,
                                        Geometry geometry, Brush fillBrush)
         {
-            for (int i = 0; i < stylusPoints.Count; i++)
-            {
-                    fillBrush = new SolidColorBrush(DefaultColor);
-                    //fillBrush.Opacity *= stylusPoints[i].PressureFactor;
-                    base.OnDraw(drawingContext, stylusPoints, geometry, fillBrush);
-            }
-
+            fillBrush = new SolidColorBrush(DefaultColor);
+            base.OnDraw(drawingContext, stylusPoints, geometry, fillBrush);
         }
 
         protected override void OnStylusMove(RawStylusInput rawStylusInput)
@@ -54,8 +49,8 @@ namespace CalligraphyTutor.Model
 
         protected override void OnStylusDown(RawStylusInput rawStylusInput)
         {
-            this.DrawingAttributes.Width = 5d;
-            this.DrawingAttributes.Height = 5d;
+            this.DrawingAttributes.Width = Globals.Instance.StrokeWidth;
+            this.DrawingAttributes.Height = Globals.Instance.StrokeHeight;
             base.OnStylusDown(rawStylusInput);
         }
     }

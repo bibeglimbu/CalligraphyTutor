@@ -33,7 +33,7 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        private double _strokeHeight = 5d;
+        private double _strokeHeight = 2.5d;
         public double StrokeHeight
         {
             get { return _strokeHeight; }

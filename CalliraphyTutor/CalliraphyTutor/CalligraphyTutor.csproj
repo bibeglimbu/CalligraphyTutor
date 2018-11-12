@@ -63,13 +63,14 @@
     </ApplicationDefinition>
     <Compile Include="CustomInkCanvas\StylusPointsDependencyProperty.cs" />
     <Compile Include="Model\BindableBase.cs" />
+    <Compile Include="Model\ExpertDynamicRenderer.cs" />
     <Compile Include="Model\ExpertInkCanvas.cs" />
     <Compile Include="Model\ExpertStrokes.cs" />
     <Compile Include="Model\FileManager.cs" />
     <Compile Include="Model\InvokeDelegateCommandAction.cs" />
-    <Compile Include="Model\StudentCanvasDynamicRenderer.cs" />
+    <Compile Include="Model\StudentDynamicRenderer.cs" />
     <Compile Include="Model\StudentInkCanvas.cs" />
-    <Compile Include="Model\StudentCanvasStroke.cs" />
+    <Compile Include="Model\StudentStroke.cs" />
     <Compile Include="ViewModel\ExpertViewModel.cs" />
     <Compile Include="ViewModel\Globals.cs" />
     <Compile Include="ViewModel\MainViewModel.cs" />
@@ -152,6 +153,9 @@
     <Resource Include="Images\OUNL.jpg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Sounds\Error.aiff" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -570,12 +570,23 @@ namespace CalligraphyTutor.ViewModel
         /// <param name="color"></param>
         public void ChangeStrokeColor(StylusEventArgs e, Color color)
         {
-            if(color == _previousColor)
+            string directory = Environment.CurrentDirectory;
+            System.Media.SoundPlayer player = new System.Media.SoundPlayer(directory + @"\Sounds\Error.wav");
+            if (color == _previousColor)
             {
                 return;
             }
             ((StudentInkCanvas)e.Source).StrokeColor = color;
             _previousColor = color;
+            //playSound();
+        }
+
+        string directory = Environment.CurrentDirectory;
+        
+        public async void playSound()
+        {
+            System.Media.SoundPlayer player = new System.Media.SoundPlayer(directory + @"\Sounds\Error.wav");
+            await Task.Run(()=>player.PlaySync());
         }
 
         private Point initVelocityPoint;

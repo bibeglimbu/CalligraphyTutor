@@ -15,7 +15,11 @@ namespace CalligraphyTutor.Model
     /// </summary>
     class ExpertStrokes: Stroke
     {
-        Globals globals;
+        Brush brush;
+        Pen pen;
+
+        Guid timestamp = new Guid("12345678-9012-3456-7890-123456789012");
+
         private System.Windows.Media.Color _strokeColor = Colors.Green;
         public Color StrokeColor
         {
@@ -29,15 +33,16 @@ namespace CalligraphyTutor.Model
         public ExpertStrokes(StylusPointCollection stylusPoints)
             : base(stylusPoints)
         {
-            globals = Globals.Instance;
+            StrokeColor = Color.FromArgb(Convert.ToByte(50 * this.StylusPoints[this.StylusPoints.Count / 2].PressureFactor), StrokeColor.R, StrokeColor.G, StrokeColor.B);
+            brush = new SolidColorBrush(StrokeColor);
+            pen = new Pen(brush, Globals.Instance.StrokeWidth);
         }
 
         protected override void DrawCore(DrawingContext drawingContext, DrawingAttributes drawingAttributes)
         {
-            //drawingAttributes.Color = StrokeColor;
-            drawingAttributes.Color = Color.FromArgb(Convert.ToByte(50 * this.StylusPoints[this.StylusPoints.Count / 2].PressureFactor), StrokeColor.R, StrokeColor.G, StrokeColor.B);
-            drawingAttributes.Width = globals.StrokeWidth;
-            drawingAttributes.Height = globals.StrokeHeight;
+            drawingAttributes.Color = StrokeColor;
+            drawingAttributes.Width = Globals.Instance.StrokeWidth;
+            drawingAttributes.Height = Globals.Instance.StrokeHeight;
             base.DrawCore(drawingContext, DrawingAttributes);
         }
     }

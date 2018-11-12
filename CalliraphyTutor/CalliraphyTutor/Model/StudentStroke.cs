@@ -19,8 +19,6 @@ namespace CalligraphyTutor.Model
     class StudentStroke: Stroke
     {
         #region vars
-        Brush brush;
-        Pen pen ;
 
         Globals globals;
         private Color _color = Colors.Black;
@@ -39,8 +37,6 @@ namespace CalligraphyTutor.Model
         public StudentStroke(StylusPointCollection stylusPoints) : base(stylusPoints)
         {
             globals = Globals.Instance;
-            brush = new SolidColorBrush(StrokeColor);
-            pen = new Pen(brush, globals.StrokeWidth);
 
         }
 
@@ -48,8 +44,6 @@ namespace CalligraphyTutor.Model
         {
             StrokeColor = c;
             globals = Globals.Instance;
-            brush = new SolidColorBrush(StrokeColor);
-            pen = new Pen(brush, globals.StrokeWidth);
 
         }
 
@@ -66,11 +60,11 @@ namespace CalligraphyTutor.Model
                 Debug.WriteLine(timeStamps.Count);
                 Debug.WriteLine("Total time taken to draw the stroke "+ (timeStamps.Last() - timeStamps.First()).TotalSeconds);
             }
-
             drawingAttributes.Color = StrokeColor;
             drawingAttributes.Width = globals.StrokeWidth;
             drawingAttributes.Height = globals.StrokeHeight;
             base.DrawCore(drawingContext, DrawingAttributes);
+
         }
     }
 }

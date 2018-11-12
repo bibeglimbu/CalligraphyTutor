@@ -20,7 +20,8 @@ namespace CalligraphyTutor.ViewModel
     public class ExpertViewModel: BindableBase
     {
         #region VARS & Property
-        //screen size of the application
+
+        //Helps set the screen size of the application in the view
         private int _screenWidth = (int)SystemParameters.PrimaryScreenWidth;
         public int ScreenWidth
         {
@@ -28,7 +29,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _screenWidth = value;
-                RaisePropertyChanged();
+                RaisePropertyChanged("ScreenWidth");
             }
         }
         private int _screenHeight = (int)SystemParameters.PrimaryScreenHeight;
@@ -38,7 +39,8 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 _screenHeight = value;
-                RaisePropertyChanged();
+
+                RaisePropertyChanged("ScreenHeight");
             }
         }
         //name of the button
@@ -64,14 +66,6 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        //        public static readonly DependencyProperty ExpertStrokesProperty = DependencyProperty.RegisterAttached(
-        //"ExpertStrokes", typeof(StrokeCollection), typeof(ExpertViewModel), new PropertyMetadata());
-
-        //        public StrokeCollection ExpertStrokes
-        //        {
-        //            get { return (StrokeCollection)GetValue(ExpertStrokesProperty); }
-        //            set { SetValue(ExpertStrokesProperty, value); }
-        //        }
 
         private StrokeCollection _expertStrokes = new StrokeCollection();
         public StrokeCollection ExpertStrokes
@@ -85,20 +79,9 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        private DrawingAttributes _expertAttributes = new DrawingAttributes();
-        public DrawingAttributes ExpertAttributes
-        {
-            get { return _expertAttributes; }
-
-            set
-            {
-                _expertAttributes = value;
-                RaisePropertyChanged();
-            }
-        }
-
         ConnectorHub.ConnectorHub myConnectorHub;
         Globals globals;
+
         private bool ExpertIsRecording = false;
 
         Guid timestamp = new Guid("12345678-9012-3456-7890-123456789013");
@@ -125,9 +108,6 @@ namespace CalligraphyTutor.ViewModel
         public ExpertViewModel()
         {
             globals = Globals.Instance;
-
-            ExpertAttributes.Width = 5d;
-            ExpertAttributes.Height = 5d;
         }
 
         private void MyConnectorHub_stopRecordingEvent(object sender)
@@ -143,36 +123,59 @@ namespace CalligraphyTutor.ViewModel
         }
 
         #region Send data
-        private void initLearningHub()
+        private async void initLearningHub()
         {
-            myConnectorHub = new ConnectorHub.ConnectorHub();
-            myConnectorHub.init();
-            myConnectorHub.sendReady();
-            myConnectorHub.startRecordingEvent += MyConnectorHub_startRecordingEvent;
-            myConnectorHub.stopRecordingEvent += MyConnectorHub_stopRecordingEvent;
-            SetValueNames();
+            await Task.Run(() =>
+            {
+                myConnectorHub = new ConnectorHub.ConnectorHub();
+                myConnectorHub.init();
+                myConnectorHub.sendReady();
+                myConnectorHub.startRecordingEvent += MyConnectorHub_startRecordingEvent;
+                myConnectorHub.stopRecordingEvent += MyConnectorHub_stopRecordingEvent;
+                SetValueNames();
+            });
         }
 
         private void SetValueNames()
         {
-                List<string> names = new List<string>();
-                names.Add("PenPressure");
-                names.Add("Tilt_X");
-                names.Add("Tilt_Y");
+            List<string> names = new List<string>();
+            names.Add("PenPressure");
+            names.Add("Tilt_X");
+            names.Add("Tilt_Y");
+            names.Add("StrokeVelocity");
             myConnectorHub.setValuesName(names);
 
         }
+        /// <summary>
+        /// For calling the <see cref="SendData(StylusEventArgs, StylusPoint)"/> async
+        /// </summary>
+        /// <param name="args"></param>
+        /// <param name="expertPoint"></param>
+        public async void SendDataAsync(StylusEventArgs args)
+        {
+            await Task.Run(() => { SendData(args); });
+        }
+        /// <summary>
+        /// Method for sending data
+        /// </summary>
+        /// <param name="args"></param>
+        /// <param name="expertPoint"></param>
         private void SendData(StylusEventArgs args)
         {
-                List<string> values = new List<string>();
-                String pressure = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
-                values.Add(pressure);
-                String Xangle = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.XTiltOrientation).ToString();
-                values.Add(Xangle);
-                String Yangle = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.YTiltOrientation).ToString();
-                values.Add(Yangle);
-            //Debug.WriteLine(v);
+            List<string> values = new List<string>();
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                String PenPressure = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
+                values.Add(PenPressure);
+                String Tilt_X = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.XTiltOrientation).ToString();
+                values.Add(Tilt_X);
+                String Tilt_Y = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.YTiltOrientation).ToString();
+                values.Add(Tilt_Y);
+                double StrokeVelocity = CalculateStrokeVelocity(args);
+                values.Add(StrokeVelocity.ToString());
+            }));
             myConnectorHub.storeFrame(values);
+            //globals.Speech.SpeakAsync("Student Data sent");
         }
 
         #endregion
@@ -240,7 +243,7 @@ namespace CalligraphyTutor.ViewModel
                         RecordButtonColor = new SolidColorBrush(Colors.White);
                         ExpertStrokes.Clear();
                     }));
-                if (globals.Speech.State != SynthesizerState.Speaking)
+                if (globals.Speech.State != SynthesizerState.Speaking )
                 {
                     globals.Speech.SpeakAsync("Expert Is recording" + ExpertIsRecording.ToString());
                 }
@@ -248,11 +251,11 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        public void SaveStrokes()
+        public async void SaveStrokes()
         {
             if (ExpertStrokes.Count != 0)
             {
-                globals.GlobalFileManager.SaveStroke(ExpertStrokes);
+                await Task.Run(()=>globals.GlobalFileManager.SaveStroke(ExpertStrokes));
             }
             else
             {
@@ -323,7 +326,7 @@ namespace CalligraphyTutor.ViewModel
                 try
                 {
                     StylusEventArgs args = (StylusEventArgs)param;
-                    SendData(args);
+                    SendDataAsync(args);
                     //if(globals.Speech.State != SynthesizerState.Speaking)
                     //{
                     //    globals.Speech.SpeakAsync("Expert data sent ");
@@ -334,14 +337,14 @@ namespace CalligraphyTutor.ViewModel
                       Debug.WriteLine(ex.StackTrace);
                 }
             }
-            else
-            {
-                if (globals.Speech.State != SynthesizerState.Speaking)
-                {
-                    globals.Speech.SpeakAsync("Expert is recording " + ExpertIsRecording.ToString());
-                }
+            //else
+            //{
+            //    if (globals.Speech.State != SynthesizerState.Speaking)
+            //    {
+            //        globals.Speech.SpeakAsync("Expert is recording " + ExpertIsRecording.ToString());
+            //    }
                 
-            }
+            //}
             //globals.LastExecution = DateTime.Now;
             //}
 
@@ -357,11 +360,34 @@ namespace CalligraphyTutor.ViewModel
 
         }
 
-        public void SendDebug(string s)
+
+        private Point initVelocityPoint;
+        private DateTime initVelocityTime;
+        /// <summary>
+        /// calculates the velocity of the stroke in seconds
+        /// </summary>
+        public double CalculateStrokeVelocity(StylusEventArgs e)
         {
-            DebugEventArgs args = new DebugEventArgs();
-            args.message = s;
-            OnDebugReceived(args);
+            Point finalVelocityPoint = new Point();
+            Application.Current.Dispatcher.Invoke(new Action(() =>
+            {
+                if (initVelocityPoint == null || initVelocityTime == null)
+                {
+                    initVelocityPoint = e.StylusDevice.GetPosition((StudentInkCanvas)e.Source);
+                    initVelocityTime = DateTime.Now;
+                    return;
+                }
+                finalVelocityPoint = e.StylusDevice.GetPosition((StudentInkCanvas)e.Source);
+            }));
+            DateTime finalVelocityTime = DateTime.Now;
+
+            double velocity = Math.Sqrt(Math.Pow(Math.Abs(finalVelocityPoint.X - initVelocityPoint.X), 2) + Math.Pow(Math.Abs(finalVelocityPoint.Y - initVelocityPoint.Y), 2))
+                / (finalVelocityTime - initVelocityTime).Milliseconds;
+            initVelocityPoint = finalVelocityPoint;
+            initVelocityTime = finalVelocityTime;
+
+            return velocity;
+
         }
         #endregion
     }

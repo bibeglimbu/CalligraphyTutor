@@ -22,19 +22,31 @@ namespace CalligraphyTutor.Model
         /// Timer for animation
         /// </summary>
         private DispatcherTimer _dispatchTimer = new DispatcherTimer();
-        Globals globals;
+        private ExpertDynamicRenderer expertDynamicRenderer;
+        /// <summary>
+        /// boolean that needs to be set for each object instance on wether the animation should run or not
+        /// </summary>
+        private bool displayAnimation = true;
+        public bool DisplayAnimation
+        {
+            get { return displayAnimation; }
+            set
+            {
+                displayAnimation = value;
+            }
+        }
+
+        public static DependencyProperty DisplayAnimationProperty = DependencyProperty.RegisterAttached(
+            "DisplayAnimation", typeof(bool), typeof(ExpertInkCanvas), new PropertyMetadata());
 
         #endregion
 
-        public ExpertInkCanvas(): base()
+        public ExpertInkCanvas()
         {
-            globals = Globals.Instance;
+            expertDynamicRenderer = new ExpertDynamicRenderer();
+            this.DynamicRenderer = expertDynamicRenderer;
             _dispatchTimer.Interval = new TimeSpan(10000);
             _dispatchTimer.Tick += _dispatchTimer_Tick;
-            this.DefaultDrawingAttributes.Width = globals.StrokeWidth;
-            this.DefaultDrawingAttributes.Height = globals.StrokeWidth;
-            this.DefaultDrawingAttributes.Color = Color.FromArgb(120, 0, 255, 0);
-
             StudentInkCanvas.PenDownUpEvent += StudentInkCanvas_PenDownUpEvent;
         }
 
@@ -46,8 +58,13 @@ namespace CalligraphyTutor.Model
 
         private void _dispatchTimer_Tick(object sender, EventArgs e)
         {
+            if(DisplayAnimation == false)
+            {
+                return;
+            }
+
             //if strokes is not empty and the user is not currently writing
-            if (this.Strokes.Count > 0 && globals.IsStylusDown == false)
+            if (this.Strokes.Count > 0 && Globals.Instance.IsStylusDown == false)
             {
                 StrokeCollection s = Strokes;
                 //play the animation
@@ -85,7 +102,7 @@ namespace CalligraphyTutor.Model
 
         private void ToggleDispatchTimer()
         {
-            globals.IsStylusDown = !globals.IsStylusDown;
+            Globals.Instance.IsStylusDown = !Globals.Instance.IsStylusDown;
         }
         #endregion
 

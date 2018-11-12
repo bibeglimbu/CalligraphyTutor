@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CalligraphyTutor.ViewModel;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -23,7 +24,7 @@ namespace CalligraphyTutor.Model
         /// <summary>
         /// Custom Renderer for chaning the behaviour of the ink as it is being drawn
         /// </summary>
-        private StudentCanvasDynamicRenderer studentCustomRenderer;
+        private StudentDynamicRenderer studentCustomRenderer;
 
         private Color _c = Colors.Black;
         /// <summary>
@@ -38,9 +39,10 @@ namespace CalligraphyTutor.Model
                 //change the dynamic rendere color
                 ColorChangedEventArgs args = new ColorChangedEventArgs();
                 args.color = _c;
-                //Add stroke when color changes
-                AddStroke(_tempSPCollection, _c);
                 OnBrushColorChanged(args);
+                //Add stroke when color changes
+                AddStroke(_tempSPCollection, prevColor);
+                prevColor = _c;
             }
         }
 
@@ -58,8 +60,11 @@ namespace CalligraphyTutor.Model
         public StudentInkCanvas()
         {
             _tempSPCollection = new StylusPointCollection();
-            studentCustomRenderer = new StudentCanvasDynamicRenderer();
+            //instantiate the customDynamicRenderer
+            studentCustomRenderer = new StudentDynamicRenderer();
             this.DynamicRenderer = studentCustomRenderer;
+            Debug.WriteLine("InkPresenter status: " + this.InkPresenter.IsEnabled);
+            prevColor = StrokeColor;
         }
 
         #region events definition
@@ -118,13 +123,23 @@ namespace CalligraphyTutor.Model
 
         protected override void OnStylusMove(StylusEventArgs e)
         {
-            _tempSPCollection.Add(e.GetStylusPoints(this).Reformat(_tempSPCollection.Description));
+            //add styluspoint from the event after checking to ensure that the collection doesnt already posses them
+            foreach(StylusPoint sp in e.GetStylusPoints(this))
+            {
+                if (_tempSPCollection.Contains(sp) == false)
+                {
+                    _tempSPCollection.Add(e.GetStylusPoints(this).Reformat(_tempSPCollection.Description));
+                }
+               
+            }
+            
             StrokeTime.Add(DateTime.Now);
             base.OnStylusMove(e);
         }
 
         #endregion
-
+        //Color that holds the color frm earlier stroke
+        private Color prevColor;
         /// <summary>
         /// method that uses the _tempStyluspointCollection to create studentStroke and save stroke in this canvas StrokeCollection
         /// </summary>
@@ -142,10 +157,13 @@ namespace CalligraphyTutor.Model
             StudentStroke customStroke = new StudentStroke(tempStroke.StylusPoints, c);
             customStroke.AddPropertyData(timestamp,StrokeTime.ToArray());
             
-            this.Strokes.Add(customStroke);
-            
-            //empty the stylusPointcollection
+            this.InkPresenter.Strokes.Add(customStroke);
+            //store the last point temporarily to
+            //StylusPoint prevfirstStylusPoint = tempStroke.StylusPoints.First();
+            // create a new stylusPointCollection
             _tempSPCollection = new StylusPointCollection();
+            //add the last point to the new collection to avoid breaking off
+            //_tempSPCollection.Add(prevfirstStylusPoint);
             StrokeTime = new List<DateTime>();
 
             Debug.WriteLine("Stroke added: Total stroke count = " + this.Strokes.Count);

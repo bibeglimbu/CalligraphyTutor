@@ -43,7 +43,7 @@
         </DockPanel>
 
         <Grid Grid.Row="1" VerticalAlignment="Top">
-            <InkCanvas Height="300" Strokes="{Binding Path=ExpertStrokes}" DefaultDrawingAttributes="{Binding ExpertAttributes}">
+            <Model:ExpertInkCanvas Height="300" Strokes="{Binding Path=ExpertStrokes}" DisplayAnimation="False" DefaultDrawingAttributes="{Binding ExpertAttributes}">
                 <i:Interaction.Triggers>
                     <i:EventTrigger EventName="StylusMove">
                         <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_OnStylusMoved}"
@@ -61,7 +61,7 @@
                     </i:EventTrigger>
                     
                 </i:Interaction.Triggers>
-            </InkCanvas>
+            </Model:ExpertInkCanvas>
 
 
             <Line Stroke="Black" Grid.Row="1" Height="2" Margin="0,-200,0,0" StrokeThickness="4"
