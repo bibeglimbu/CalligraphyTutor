@@ -156,8 +156,8 @@ namespace CalligraphyTutor.Model
             //convert the stroke into studentcanvasStroke
             StudentStroke customStroke = new StudentStroke(tempStroke.StylusPoints, c);
             customStroke.AddPropertyData(timestamp,StrokeTime.ToArray());
-            
             this.InkPresenter.Strokes.Add(customStroke);
+           
             //store the last point temporarily to
             //StylusPoint prevfirstStylusPoint = tempStroke.StylusPoints.First();
             // create a new stylusPointCollection
