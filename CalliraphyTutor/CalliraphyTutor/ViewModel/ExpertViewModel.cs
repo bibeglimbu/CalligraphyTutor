@@ -251,11 +251,11 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        public async void SaveStrokes()
+        public void SaveStrokes()
         {
             if (ExpertStrokes.Count != 0)
             {
-                await Task.Run(()=>globals.GlobalFileManager.SaveStroke(ExpertStrokes));
+                globals.GlobalFileManager.SaveStroke(ExpertStrokes);
             }
             else
             {
@@ -373,11 +373,11 @@ namespace CalligraphyTutor.ViewModel
             {
                 if (initVelocityPoint == null || initVelocityTime == null)
                 {
-                    initVelocityPoint = e.StylusDevice.GetPosition((StudentInkCanvas)e.Source);
+                    initVelocityPoint = e.StylusDevice.GetPosition((ExpertInkCanvas)e.Source);
                     initVelocityTime = DateTime.Now;
                     return;
                 }
-                finalVelocityPoint = e.StylusDevice.GetPosition((StudentInkCanvas)e.Source);
+                finalVelocityPoint = e.StylusDevice.GetPosition((ExpertInkCanvas)e.Source);
             }));
             DateTime finalVelocityTime = DateTime.Now;
 

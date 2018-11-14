@@ -26,7 +26,7 @@ namespace CalligraphyTutor.Model
         /// </summary>
         private StudentDynamicRenderer studentCustomRenderer;
 
-        private Color _c = Colors.Black;
+        private Color _c = Colors.Green;
         /// <summary>
         /// Property which determines the default color of the stroke
         /// </summary>
@@ -45,6 +45,24 @@ namespace CalligraphyTutor.Model
                 prevColor = _c;
             }
         }
+
+        /// <summary>
+        /// Value that holds if the pressure applied is higher or lower that the experts. Must return either -1,0 or 1
+        /// </summary>
+        private int expertPressureFactor = 0;
+        public int ExpertPressureFactor
+        {
+            get { return expertPressureFactor; }
+            set
+            {
+                if(value == 0 || value == -1 || value == 1)
+                expertPressureFactor = value;
+                PressureChangedEventArgs args = new PressureChangedEventArgs();
+                args.pressurefactor = expertPressureFactor;
+                OnExpertPressureChanged(args);
+            }
+        }
+
 
         Guid timestamp = new Guid("12345678-9012-3456-7890-123456789012");
         List<DateTime> StrokeTime = new List<DateTime>();
@@ -82,6 +100,9 @@ namespace CalligraphyTutor.Model
             }
         }
 
+        /// <summary>
+        /// event that notifies that the color has changed
+        /// </summary>
         public static event EventHandler<ColorChangedEventArgs> BrushColorChangedEvent;
         protected virtual void OnBrushColorChanged(ColorChangedEventArgs c)
         {
@@ -94,6 +115,23 @@ namespace CalligraphyTutor.Model
         public class ColorChangedEventArgs : EventArgs
         {
             public Color color { get; set; }
+        }
+
+        /// <summary>
+        /// event that notifies that the pressure applied is higher or lower than the experts
+        /// </summary>
+        public static event EventHandler<PressureChangedEventArgs> PressureChangedEvent;
+        protected virtual void OnExpertPressureChanged(PressureChangedEventArgs c)
+        {
+            EventHandler<PressureChangedEventArgs> handler = PressureChangedEvent;
+            if (handler != null)
+            {
+                handler(this, c);
+            }
+        }
+        public class PressureChangedEventArgs : EventArgs
+        {
+            public int pressurefactor { get; set; }
         }
         #endregion
 
@@ -185,6 +223,7 @@ namespace CalligraphyTutor.Model
 
                 if (v.Length < 2)
                 {
+                    //remove excess points between the 2 points 
                     tempStroke.StylusPoints.RemoveAt(i);
                     continue;
                 }
@@ -196,5 +235,7 @@ namespace CalligraphyTutor.Model
             }
             return tempStroke;
         }
+
+       
     }
 }

@@ -271,7 +271,7 @@ namespace CalligraphyTutor.ViewModel
                 Vector v = Point.Subtract(prevPoint, pt);
 
                 //if the pen has moved a certain distance
-                if (v.Length > 1)
+                if (v.Length > 2)
                 {
                     //return the stylus point to be used as ref. Hit test is also performed with in this method.
                     StylusPoint expertSP = SelectExpertPoint(args, ExpertStrokes);
@@ -283,14 +283,22 @@ namespace CalligraphyTutor.ViewModel
                         if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) > expertSP.GetPropertyValue(StylusPointProperties.NormalPressure) + 400)
                         {
                             //new Task(() => globals.Speech.SpeakAsync("Pressure too high")).Start();
-                            Debug.WriteLine("Pressure High" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
+                           //Debug.WriteLine("Pressure High" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
+                        //if value is higher set the Expert pressure factor to -1 which produces darker color
+                        ((StudentInkCanvas)args.Source).ExpertPressureFactor = -1;
                         }
                         else if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) < expertSP.GetPropertyValue(StylusPointProperties.NormalPressure) - 400)
                         {
                             //new Task(() => globals.Speech.SpeakAsync("Pressure too low")).Start();
-                            Debug.WriteLine("Pressure Low" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
-                        }
-
+                            //Debug.WriteLine("Pressure Low" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
+                        //if value is higher set the Expert pressure factor to +1 which produces lighter color
+                        ((StudentInkCanvas)args.Source).ExpertPressureFactor = 1;
+                    }
+                    else
+                    {
+                        //if the value is with in the range set it to 0 which produces no change
+                        ((StudentInkCanvas)args.Source).ExpertPressureFactor = 0;
+                    }
 
                     //reset the point
                     prevPoint = pt;
@@ -541,7 +549,7 @@ namespace CalligraphyTutor.ViewModel
                     {
                         refStylusPoint = sp;
                         //change the color of the dynamic renderer to black
-                        ChangeStrokeColor(e, Colors.Black);
+                        ChangeStrokeColor(e, Colors.Green);
                         //return to exit from the whole method
                         return refStylusPoint;
                     }
@@ -568,14 +576,14 @@ namespace CalligraphyTutor.ViewModel
                 }
                 
             }
-            ChangeStrokeColor(e, Colors.DarkRed);
+            ChangeStrokeColor(e, Colors.Red);
             return refStylusPoint;
         }
 
         /// <summary>
         /// Variable that prevents assignment of colors when there is no change of stroke hit state
         /// </summary>
-        private Color _previousColor = Colors.Black;
+        private Color _previousColor = Colors.Green;
         /// <summary>
         /// Method for changing color
         /// </summary>
@@ -591,7 +599,7 @@ namespace CalligraphyTutor.ViewModel
             }
             ((StudentInkCanvas)e.Source).StrokeColor = color;
             _previousColor = color;
-            if ((DateTime.Now-PlayDateTime).Seconds > 2.5)
+            if ((DateTime.Now-PlayDateTime).Seconds > 2)
             {
                 playSound();
             }

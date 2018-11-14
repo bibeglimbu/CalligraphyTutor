@@ -20,7 +20,7 @@ namespace CalligraphyTutor.Model
 
         Guid timestamp = new Guid("12345678-9012-3456-7890-123456789012");
 
-        private System.Windows.Media.Color _strokeColor = Colors.Green;
+        private System.Windows.Media.Color _strokeColor = Colors.Blue;
         public Color StrokeColor
         {
             get { return _strokeColor; }
