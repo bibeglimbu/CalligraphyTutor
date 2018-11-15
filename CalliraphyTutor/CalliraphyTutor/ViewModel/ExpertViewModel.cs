@@ -14,6 +14,7 @@ using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Runtime.InteropServices;
 
 namespace CalligraphyTutor.ViewModel
 {
@@ -66,7 +67,6 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-
         private StrokeCollection _expertStrokes = new StrokeCollection();
         public StrokeCollection ExpertStrokes
         {
@@ -82,27 +82,11 @@ namespace CalligraphyTutor.ViewModel
         ConnectorHub.ConnectorHub myConnectorHub;
         Globals globals;
 
+        /// <summary>
+        /// holds state if the recroding button is clicked or not
+        /// </summary>
         private bool ExpertIsRecording = false;
 
-        Guid timestamp = new Guid("12345678-9012-3456-7890-123456789013");
-        List<DateTime> StrokeTime = new List<DateTime>();
-        #endregion
-
-        #region events
-        public event EventHandler<DebugEventArgs> DebugReceived;
-        protected virtual void OnDebugReceived(DebugEventArgs e)
-        {
-            EventHandler<DebugEventArgs> handler = DebugReceived;
-            if (handler != null)
-            {
-                handler(this, e);
-            }
-        }
-
-        public class DebugEventArgs : EventArgs
-        {
-            public string message { get; set; }
-        }
         #endregion
 
         public ExpertViewModel()
@@ -123,6 +107,9 @@ namespace CalligraphyTutor.ViewModel
         }
 
         #region Send data
+        /// <summary>
+        /// initializes the learning hub
+        /// </summary>
         private async void initLearningHub()
         {
             await Task.Run(() =>
@@ -136,6 +123,9 @@ namespace CalligraphyTutor.ViewModel
             });
         }
 
+        /// <summary>
+        /// sets the value names that needs to be recorded
+        /// </summary>
         private void SetValueNames()
         {
             List<string> names = new List<string>();
@@ -146,6 +136,7 @@ namespace CalligraphyTutor.ViewModel
             myConnectorHub.setValuesName(names);
 
         }
+        
         /// <summary>
         /// For calling the <see cref="SendData(StylusEventArgs, StylusPoint)"/> async
         /// </summary>
@@ -172,6 +163,10 @@ namespace CalligraphyTutor.ViewModel
                 String Tilt_Y = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.YTiltOrientation).ToString();
                 values.Add(Tilt_Y);
                 double StrokeVelocity = CalculateStrokeVelocity(args);
+                if(Double.IsNaN(StrokeVelocity) || Double.IsInfinity(StrokeVelocity))
+                {
+                    StrokeVelocity = 0;
+                }
                 values.Add(StrokeVelocity.ToString());
             }));
             myConnectorHub.storeFrame(values);
@@ -199,6 +194,7 @@ namespace CalligraphyTutor.ViewModel
                 return _buttonClicked;
             }
         }
+
         public ICommand RecordButton_clicked
         {
             get
@@ -255,7 +251,8 @@ namespace CalligraphyTutor.ViewModel
         {
             if (ExpertStrokes.Count != 0)
             {
-                globals.GlobalFileManager.SaveStroke(ExpertStrokes);
+                Debug.WriteLine("guids " + ExpertStrokes[ExpertStrokes.Count-1].GetPropertyDataIds().Length);
+                FileManager.Instance.SaveStroke(ExpertStrokes);
             }
             else
             {
@@ -294,61 +291,23 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        private ICommand _strokeCollected;
-        public ICommand ExpertCanvas_OnStrokeCollected
-        {
-            get
-            {
-                _strokeCollected = new RelayCommand(
-                    param => OnStrokeCollected(param),
-                    null
-                    );
-
-                return _stylusMoved;
-            }
-        }
-
-        private void OnStrokeCollected(Object param)
-        {
-            ((InkCanvasStrokeCollectedEventArgs)param).Stroke.AddPropertyData(timestamp, StrokeTime.ToArray());
-        }
-
         private void OnStylusMoved(object param)
         {
-            //run only of 1/4th of a sec has elapsed
-            //if ((DateTime.Now - globals.LastExecution).TotalSeconds >= 0.1)
-            //{
-            StrokeTime.Add(DateTime.Now);
 
-            //send data to learning hub
+            //send data to learning hub if recording button is clicked
             if (ExpertIsRecording == true)
             {
                 try
                 {
                     StylusEventArgs args = (StylusEventArgs)param;
                     SendDataAsync(args);
-                    //if(globals.Speech.State != SynthesizerState.Speaking)
-                    //{
-                    //    globals.Speech.SpeakAsync("Expert data sent ");
-                    //}
+
                 }
                 catch (Exception ex)
                 {
                       Debug.WriteLine(ex.StackTrace);
                 }
             }
-            //else
-            //{
-            //    if (globals.Speech.State != SynthesizerState.Speaking)
-            //    {
-            //        globals.Speech.SpeakAsync("Expert is recording " + ExpertIsRecording.ToString());
-            //    }
-                
-            //}
-            //globals.LastExecution = DateTime.Now;
-            //}
-
-            
         }
 
         private void OnStylusInRange(object Param)
@@ -360,32 +319,46 @@ namespace CalligraphyTutor.ViewModel
 
         }
 
+        /// <summary>
+        /// Method to calculate distance 
+        /// </summary>
+        /// <param name="startingPoint"></param>
+        /// <param name="finalPoint"></param>
+        /// <returns></returns>
+        public double CalcualteDistance(Point startingPoint, Point finalPoint)
+        {
+            double distance = Math.Sqrt(Math.Pow(Math.Abs(startingPoint.X - finalPoint.X), 2)
+                    + Math.Pow(Math.Abs(startingPoint.Y - finalPoint.Y), 2));
+
+            //divide the distance with PPI for the surface laptop to convert to inches and then multiply to change into mm
+            double distancePPI = (distance / 200) * 25.4;
+            return distancePPI;
+        }
 
         private Point initVelocityPoint;
         private DateTime initVelocityTime;
+        private Point finalVelocityPoint;
         /// <summary>
         /// calculates the velocity of the stroke in seconds
         /// </summary>
         public double CalculateStrokeVelocity(StylusEventArgs e)
         {
-            Point finalVelocityPoint = new Point();
             Application.Current.Dispatcher.Invoke(new Action(() =>
             {
+                //if it is the first time running assign the inital point and retrun
                 if (initVelocityPoint == null || initVelocityTime == null)
                 {
-                    initVelocityPoint = e.StylusDevice.GetPosition((ExpertInkCanvas)e.Source);
+                    initVelocityPoint = e.StylusDevice.GetStylusPoints((ExpertInkCanvas)e.Source).Last().ToPoint();
                     initVelocityTime = DateTime.Now;
                     return;
                 }
-                finalVelocityPoint = e.StylusDevice.GetPosition((ExpertInkCanvas)e.Source);
+                //else assign the last point and 
+                finalVelocityPoint = e.StylusDevice.GetStylusPoints((ExpertInkCanvas)e.Source).Last().ToPoint();
             }));
-            DateTime finalVelocityTime = DateTime.Now;
 
-            double velocity = Math.Sqrt(Math.Pow(Math.Abs(finalVelocityPoint.X - initVelocityPoint.X), 2) + Math.Pow(Math.Abs(finalVelocityPoint.Y - initVelocityPoint.Y), 2))
-                / (finalVelocityTime - initVelocityTime).Milliseconds;
+            double velocity = CalcualteDistance(initVelocityPoint, finalVelocityPoint) / (DateTime.Now - initVelocityTime).Milliseconds;
             initVelocityPoint = finalVelocityPoint;
-            initVelocityTime = finalVelocityTime;
-
+            initVelocityTime = DateTime.Now;
             return velocity;
 
         }

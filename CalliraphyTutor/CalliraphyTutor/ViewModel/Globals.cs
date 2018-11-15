@@ -61,15 +61,6 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-
-
-        //class for opening and saving to file
-        private FileManager _fileManager = new FileManager();
-        public FileManager GlobalFileManager
-        {
-            get { return _fileManager; }
-        }
-
         private Globals()
         {
             _speech.Rate = 2;

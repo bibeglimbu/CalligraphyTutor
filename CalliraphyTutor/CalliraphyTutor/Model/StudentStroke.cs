@@ -31,7 +31,7 @@ namespace CalligraphyTutor.Model
             }
         }
 
-        Guid timestamp = new Guid("12345678-9012-3456-7890-123456789012");
+        Guid studentTimestamp = new Guid("12345678-9012-3456-7890-123456789012");
         #endregion
 
         public StudentStroke(StylusPointCollection stylusPoints) : base(stylusPoints)
@@ -49,9 +49,9 @@ namespace CalligraphyTutor.Model
 
         protected override void DrawCore(DrawingContext drawingContext, DrawingAttributes drawingAttributes)
         {
-            if (this.ContainsPropertyData(timestamp))
+            if (this.ContainsPropertyData(studentTimestamp))
             {
-                object data = this.GetPropertyData(timestamp);
+                object data = this.GetPropertyData(studentTimestamp);
                 List<DateTime> timeStamps = new List<DateTime>();
                 foreach(DateTime dt in (Array)data)
                 {

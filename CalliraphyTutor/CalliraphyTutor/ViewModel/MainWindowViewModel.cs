@@ -127,7 +127,6 @@ namespace CalligraphyTutor.ViewModel
             {
                 case "Expert":
                     expertViewModel = new ExpertViewModel();
-                    expertViewModel.DebugReceived += ExpertViewModel_DebugReceived;
                     CurrentViewModel = expertViewModel;
                     break;
                 case "Student":
@@ -143,11 +142,6 @@ namespace CalligraphyTutor.ViewModel
         }
 
         private void StudentViewModel_DebugReceived(object sender, StudentViewModel.DebugEventArgs e)
-        {
-            DebugText = e.message;
-        }
-
-        private void ExpertViewModel_DebugReceived(object sender, ExpertViewModel.DebugEventArgs e)
         {
             DebugText = e.message;
         }

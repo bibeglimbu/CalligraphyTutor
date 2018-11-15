@@ -65,7 +65,8 @@
     <Compile Include="Model\BindableBase.cs" />
     <Compile Include="Model\ExpertDynamicRenderer.cs" />
     <Compile Include="Model\ExpertInkCanvas.cs" />
-    <Compile Include="Model\ExpertStrokes.cs" />
+    <Compile Include="Model\ExpertStroke.cs" />
+    <Compile Include="Model\ExpertStrokeCollection.cs" />
     <Compile Include="Model\FileManager.cs" />
     <Compile Include="Model\InvokeDelegateCommandAction.cs" />
     <Compile Include="Model\StudentDynamicRenderer.cs" />

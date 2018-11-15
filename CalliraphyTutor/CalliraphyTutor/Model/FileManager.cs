@@ -1,4 +1,6 @@
 ﻿using Microsoft.Win32;
+using System;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Ink;
 
@@ -7,11 +9,14 @@ namespace CalligraphyTutor.Model
         public class FileManager
         {
 
-            /// <summary>
-            /// Method to save the strokes from the student canvas as expert recordings to a file
-            /// </summary>
-            /// <param name="strokeCollection"></param>
-            public void SaveStroke(StrokeCollection strokeCollection)
+        private static readonly Lazy<FileManager> lazy = new Lazy<FileManager>(() => new FileManager());
+        public static FileManager Instance { get { return lazy.Value; } }
+
+        /// <summary>
+        /// Method to save the strokes from the student canvas as expert recordings to a file
+        /// </summary>
+        /// <param name="strokeCollection"></param>
+        public void SaveStroke(StrokeCollection strokeCollection)
             {
                 SaveFileDialog saveFileDialog1 = new SaveFileDialog();
                 saveFileDialog1.Filter = "isf files (*.isf)|*.isf";
@@ -44,7 +49,8 @@ namespace CalligraphyTutor.Model
                         _loadedStrokes = new StrokeCollection(fs);
                     }
                 }
-                return _loadedStrokes;
+            //Debug.WriteLine("file manager guids " + _loadedStrokes[_loadedStrokes.Count - 1].GetPropertyDataIds().Length);
+            return _loadedStrokes;
             }
 
             /// <summary>

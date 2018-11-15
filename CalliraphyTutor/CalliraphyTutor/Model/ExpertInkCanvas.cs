@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,6 +16,7 @@ using System.Windows.Threading;
 
 namespace CalligraphyTutor.Model
 {
+    [Guid("12345678-9012-3456-7890-123456789013")]
     class ExpertInkCanvas: InkCanvas
     {
         #region Vars & Properties
@@ -38,6 +40,9 @@ namespace CalligraphyTutor.Model
 
         public static DependencyProperty DisplayAnimationProperty = DependencyProperty.RegisterAttached(
             "DisplayAnimation", typeof(bool), typeof(ExpertInkCanvas), new PropertyMetadata());
+  
+        Guid expertTimestamp = new Guid("12345678-9012-3456-7890-123456789013");
+        List<DateTime> StrokeTime = new List<DateTime>();
 
         #endregion
 
@@ -84,23 +89,32 @@ namespace CalligraphyTutor.Model
             {
                 return;
             }
-            //imp not to use e.newStrokes as iterator as this is a editable collection and can change.
-            StrokeCollection sc = e.NewStrokes;
-            //temp holder for new modified stroke collection which is to be passed as the new set of strokes
-            StrokeCollection scHolder = new StrokeCollection();
-            foreach (Stroke s in sc)
-            {
-                Debug.WriteLine("before filtering "+s.StylusPoints.Count);
-                scHolder.Add(FilterExpertData(s));
-                Debug.WriteLine("after filtering " + scHolder[scHolder.Count-1].StylusPoints.Count);
-            }
-            e.NewStrokes.Clear();
-            e.NewStrokes.Add(scHolder);
             // start the animation
             base.OnStrokesReplaced(e);
         }//OnStrokesReplaced
 
-        private void ToggleDispatchTimer()
+        protected override void OnStylusMove(StylusEventArgs e)
+        {
+            //add styluspoint from the event after checking to ensure that the collection doesnt already posses them
+            StrokeTime.Add(DateTime.Now);
+            base.OnStylusMove(e);
+        }
+
+        protected override void OnStrokeCollected(InkCanvasStrokeCollectedEventArgs e)
+        {
+            this.Strokes.Remove(e.Stroke);
+            if (e.Stroke.StylusPoints.Count > 2)
+            {
+                Debug.WriteLine("after filtering " + e.Stroke.StylusPoints.Count);
+                ExpertStroke customStroke = FilterExpertData( new ExpertStroke(e.Stroke.StylusPoints));
+                Debug.WriteLine("after filtering " + customStroke.StylusPoints.Count);
+                customStroke.AddPropertyData(expertTimestamp, StrokeTime.ToArray());
+                this.InkPresenter.Strokes.Add(customStroke);
+            }
+            StrokeTime = new List<DateTime>();
+        }
+
+            private void ToggleDispatchTimer()
         {
             Globals.Instance.IsStylusDown = !Globals.Instance.IsStylusDown;
         }
@@ -189,13 +203,14 @@ namespace CalligraphyTutor.Model
 
         Point prevPoint = new Point(double.NegativeInfinity, double.NegativeInfinity);
         /// <summary>
-        /// Method for removing excess styluspoints from a expert stroke
+        /// Method for removing excess styluspoints from a expert stroke. has to be performed befored saving the guid not after loading, in which case guid is lost
+        /// cannot write a method currently that automatically stores all guid
         /// </summary>
         /// <param name="stroke"></param>
-        private Stroke FilterExpertData(Stroke stroke)
+        private ExpertStroke FilterExpertData(Stroke stroke)
         {
             //create a copy of stroke for iterating
-            ExpertStrokes tempStroke = new ExpertStrokes(stroke.StylusPoints);
+            ExpertStroke tempStroke = new ExpertStroke(stroke.StylusPoints);
             for (int i = 0; i < tempStroke.StylusPoints.Count; i++)
             {
                 Point pt = tempStroke.StylusPoints[i].ToPoint();
@@ -214,6 +229,7 @@ namespace CalligraphyTutor.Model
             }
             return tempStroke;
         }
+
 
         #endregion
     }

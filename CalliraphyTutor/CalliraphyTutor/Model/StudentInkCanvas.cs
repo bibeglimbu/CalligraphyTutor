@@ -64,7 +64,7 @@ namespace CalligraphyTutor.Model
         }
 
 
-        Guid timestamp = new Guid("12345678-9012-3456-7890-123456789012");
+        Guid studentTimestamp = new Guid("12345678-9012-3456-7890-123456789012");
         List<DateTime> StrokeTime = new List<DateTime>();
         #endregion
 
@@ -187,15 +187,14 @@ namespace CalligraphyTutor.Model
             {
                 return;
             }
-            Debug.WriteLine("StudentInkcanvas before: "+spc.Count);
+            
             //save the stroke temporarily for filtering the data
-            Stroke tempStroke = FilterStrokeData(new Stroke(spc));
-            Debug.WriteLine("StudentInkcanvas after: " + tempStroke.StylusPoints.Count);
+            StudentStroke tempStroke = FilterStrokeData(new Stroke(spc));
             //convert the stroke into studentcanvasStroke
             StudentStroke customStroke = new StudentStroke(tempStroke.StylusPoints, c);
-            customStroke.AddPropertyData(timestamp,StrokeTime.ToArray());
+            customStroke.AddPropertyData(studentTimestamp,StrokeTime.ToArray());
             this.InkPresenter.Strokes.Add(customStroke);
-           
+            Debug.WriteLine("stylus point: " + customStroke.StylusPoints.Count + " timestamps collected" + StrokeTime.Count);
             //store the last point temporarily to
             //StylusPoint prevfirstStylusPoint = tempStroke.StylusPoints.First();
             // create a new stylusPointCollection
@@ -203,7 +202,7 @@ namespace CalligraphyTutor.Model
             //add the last point to the new collection to avoid breaking off
             //_tempSPCollection.Add(prevfirstStylusPoint);
             StrokeTime = new List<DateTime>();
-
+            
             Debug.WriteLine("Stroke added: Total stroke count = " + this.Strokes.Count);
         }
 
@@ -212,10 +211,10 @@ namespace CalligraphyTutor.Model
         /// Method for removing excess styluspoints from a expert stroke
         /// </summary>
         /// <param name="stroke"></param>
-        private Stroke FilterStrokeData(Stroke stroke)
+        private StudentStroke FilterStrokeData(Stroke stroke)
         {
             //create a copy of stroke for iterating
-            ExpertStrokes tempStroke = new ExpertStrokes(stroke.StylusPoints);
+            StudentStroke tempStroke = new StudentStroke(stroke.StylusPoints);
             for (int i = 0; i < tempStroke.StylusPoints.Count; i++)
             {
                 Point pt = tempStroke.StylusPoints[i].ToPoint();

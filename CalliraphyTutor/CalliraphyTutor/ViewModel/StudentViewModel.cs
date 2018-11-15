@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
 using System.Text;
 using System.Threading.Tasks;
@@ -277,7 +278,10 @@ namespace CalligraphyTutor.ViewModel
                     StylusPoint expertSP = SelectExpertPoint(args, ExpertStrokes);
 
                     //calculate velocity
-                    //StrokeVelocityAsync(args);
+                    if(CalculateStudentStrokeVelocity(args)> CalculateAverageExpertStrokeVelocity(currentStroke) && (DateTime.Now - PlayDateTime).Seconds > 1.5)
+                    {
+                        playSound();
+                    }
 
                         //check if the student is between the experts range, current issue with the pressure at 4000 level while drawn but changes to 1000 when stroke is created
                         if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) > expertSP.GetPropertyValue(StylusPointProperties.NormalPressure) + 400)
@@ -347,7 +351,7 @@ namespace CalligraphyTutor.ViewModel
         {
             if (StudentStrokes.Count != 0)
             {
-                globals.GlobalFileManager.SaveStroke(StudentStrokes);
+                FileManager.Instance.SaveStroke(StudentStrokes);
             }
             else
             {
@@ -390,7 +394,7 @@ namespace CalligraphyTutor.ViewModel
             Application.Current.Dispatcher.Invoke(new Action(() =>
             {
                 
-                double StrokeVelocity = CalculateStrokeVelocity(args);
+                double StrokeVelocity = CalculateStudentStrokeVelocity(args);
                 if(Double.IsNaN(StrokeVelocity) || Double.IsInfinity(StrokeVelocity))
                 {
                     StrokeVelocity = 0;
@@ -434,7 +438,8 @@ namespace CalligraphyTutor.ViewModel
         {
             //when the stroke is loaded initiate the learning hub. Having it in constructors will not work
             initLearningHub();
-            ExpertStrokes = new StrokeCollection(globals.GlobalFileManager.LoadStroke());
+            ExpertStrokes = new StrokeCollection(FileManager.Instance.LoadStroke());
+            Debug.WriteLine("guids " + ExpertStrokes[ExpertStrokes.Count - 1].GetPropertyDataIds().Length);
             ExpertStrokeLoaded = true;
             //start the timer
             //_studentTimer.Start();
@@ -521,6 +526,10 @@ namespace CalligraphyTutor.ViewModel
         }
 
         /// <summary>
+        /// Stroke that holds the stroke to which the current styluspoint belongs to
+        /// </summary>
+        Stroke currentStroke;
+        /// <summary>
         /// Method for returning the nearest styluspoint in the expert stroke from the point at which the pen is standing.
         /// </summary>
         /// <param name="e">stylus args must be sent to cehange the dynamic rederer color</param>
@@ -548,16 +557,12 @@ namespace CalligraphyTutor.ViewModel
                     if (new Rect(sp.X, sp.Y, 10, 10).IntersectsWith(new Rect(point.X, point.Y, 10, 10)))
                     {
                         refStylusPoint = sp;
+                        currentStroke = s;
                         //change the color of the dynamic renderer to black
                         ChangeStrokeColor(e, Colors.Green);
                         //return to exit from the whole method
                         return refStylusPoint;
                     }
-                    //else
-                    //{
-                    //    //set the color to red
-                    //    ChangeStrokeColor(e, Colors.Red);
-                    //}
                     //calculate the distance from the point to the pen
                     double tempDisplacement = CalcualteDistance(point, sp.ToPoint());
                     //if it is the first time the assign value and return
@@ -565,6 +570,7 @@ namespace CalligraphyTutor.ViewModel
                     {
                         _strokeDeviation = tempDisplacement;
                         refStylusPoint = sp;
+                        currentStroke = s;
                         continue;
                     }
                     //if the new distance is smaller than the previous distance, store the value
@@ -572,10 +578,12 @@ namespace CalligraphyTutor.ViewModel
                     {
                         _strokeDeviation = tempDisplacement;
                         refStylusPoint = sp;
+                        currentStroke = s;
                     }
                 }
                 
             }
+            //if none of the points return a hit, change color and return the closest sp
             ChangeStrokeColor(e, Colors.Red);
             return refStylusPoint;
         }
@@ -599,10 +607,6 @@ namespace CalligraphyTutor.ViewModel
             }
             ((StudentInkCanvas)e.Source).StrokeColor = color;
             _previousColor = color;
-            if ((DateTime.Now-PlayDateTime).Seconds > 2)
-            {
-                playSound();
-            }
         }
 
         /// <summary>
@@ -630,7 +634,7 @@ namespace CalligraphyTutor.ViewModel
         /// <summary>
         /// calculates the velocity of the stroke in seconds
         /// </summary>
-        public double CalculateStrokeVelocity(StylusEventArgs e)
+        public double CalculateStudentStrokeVelocity(StylusEventArgs e)
         {
             Application.Current.Dispatcher.Invoke(new Action(() =>
             {
@@ -645,11 +649,45 @@ namespace CalligraphyTutor.ViewModel
                 finalVelocityPoint = e.StylusDevice.GetStylusPoints((StudentInkCanvas)e.Source).Last().ToPoint();
             }));
 
-            double velocity = CalcualteDistance(initVelocityPoint, finalVelocityPoint)/ (DateTime.Now - initVelocityTime).Milliseconds;
+            double velocity = CalcualteDistance(initVelocityPoint, finalVelocityPoint)/ (DateTime.Now - initVelocityTime).TotalSeconds;
             initVelocityPoint = finalVelocityPoint;
             initVelocityTime = DateTime.Now;
             return velocity;
             
+        }
+
+        //Guid expertTimestamp = new Guid("12345678-9012-3456-7890-123456789013");
+        /// <summary>
+        /// calculates the velocity of the stroke in seconds for expert stroke since the expert stroke could not be used in collection
+        /// </summary>
+        public double CalculateAverageExpertStrokeVelocity(Stroke s)
+        {
+            GuidAttribute IMyInterfaceAttribute = (GuidAttribute)Attribute.GetCustomAttribute(typeof(ExpertInkCanvas), typeof(GuidAttribute));
+            Debug.WriteLine("IMyInterface Attribute: " + IMyInterfaceAttribute.Value);
+            Guid expertTimestamp = new Guid(IMyInterfaceAttribute.Value);
+
+            Debug.WriteLine("guids " + s.GetPropertyDataIds().Length);
+            double totalStrokeLenght = 0;
+            double velocity = 0;
+            for (int i = 0; i < s.StylusPoints.Count - 1; i++)
+            {
+                totalStrokeLenght += CalcualteDistance(s.StylusPoints[i].ToPoint(), s.StylusPoints[i + 1].ToPoint());
+            }
+
+            List<DateTime> timeStamps = new List<DateTime>();
+            if (s.ContainsPropertyData(expertTimestamp))
+            {
+                object data = s.GetPropertyData(expertTimestamp);
+                foreach (DateTime dt in (Array)data)
+                {
+                    timeStamps.Add(dt);
+                }
+
+                velocity = totalStrokeLenght / (timeStamps.Last() - timeStamps.First()).TotalSeconds;
+            }
+
+            return velocity;
+
         }
     }
 }
