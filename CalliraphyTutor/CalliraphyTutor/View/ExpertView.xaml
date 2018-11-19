@@ -12,9 +12,10 @@
 
     <Grid Background="#7ec0ee">
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.4*"/>
+            <RowDefinition Height="0.3*"/>
             <RowDefinition Height="1.4*"/>
-            <RowDefinition Height="0.2*"/>
+            <RowDefinition Height="0.15*"/>
+            <RowDefinition Height="0.15*"/>
         </Grid.RowDefinitions>
 
         <DockPanel HorizontalAlignment="Center" Grid.Row="0" Margin="5,5,5,5" >
@@ -39,11 +40,10 @@
                     </Style>
                 </Button.Style>
             </Button>
-            <TextBlock Text="{Binding TestNumber}"/>
         </DockPanel>
 
         <Grid Grid.Row="1" VerticalAlignment="Top">
-            <Model:ExpertInkCanvas Height="300" Strokes="{Binding Path=ExpertStrokes, Mode=TwoWay}" DisplayAnimation="False">
+            <Model:ExpertInkCanvas Height="300" Strokes="{Binding Path=ExpertStrokes, Mode=TwoWay}" >
                 <i:Interaction.Triggers>
                     <i:EventTrigger EventName="StylusMove">
                         <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_OnStylusMoved}"
@@ -52,6 +52,10 @@
 
                     <i:EventTrigger EventName="StylusInRange">
                         <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_StylusInRange}"
+                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
+                    </i:EventTrigger>
+                    <i:EventTrigger EventName="StylusDown">
+                        <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_OnStylusDown}"
                                                            CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
                     </i:EventTrigger>
 
@@ -77,7 +81,12 @@
         </Grid>
 
         <Grid Grid.Row="2" HorizontalAlignment="Center">
-            <TextBlock>Welcome to expert mode. Please touch the Screen with your pen first.</TextBlock>
+            <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked}"> Check to enable evaluation Mode</CheckBox>
+            
+        </Grid>
+
+        <Grid Grid.Row="3" HorizontalAlignment="Center">
+            <TextBlock Grid.Column="1"> Welcome to expert mode. Please hover the pen above the Screen first.</TextBlock>
         </Grid>
         
     </Grid>

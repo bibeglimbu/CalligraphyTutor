@@ -131,7 +131,6 @@ namespace CalligraphyTutor.ViewModel
                     break;
                 case "Student":
                     studentViewModel = new StudentViewModel();
-                    studentViewModel.DebugReceived += StudentViewModel_DebugReceived;
                     CurrentViewModel = studentViewModel;
                     break;
                 case "MainWindow":
@@ -139,11 +138,6 @@ namespace CalligraphyTutor.ViewModel
                     CurrentViewModel = this;
                     break;
             }
-        }
-
-        private void StudentViewModel_DebugReceived(object sender, StudentViewModel.DebugEventArgs e)
-        {
-            DebugText = e.message;
         }
     }
 }

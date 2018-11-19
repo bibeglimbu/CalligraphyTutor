@@ -173,28 +173,6 @@ namespace CalligraphyTutor.ViewModel
             StartRecordingData();
         }
 
-        #region Events Definition
-
-        /// <summary>
-        /// Event for publishing the debug message to be displayed in the Main window debug box.
-        /// </summary>
-        public event EventHandler<DebugEventArgs> DebugReceived;
-        protected virtual void OnDebugReceived(DebugEventArgs e)
-        {
-            EventHandler<DebugEventArgs> handler = DebugReceived;
-            if (handler != null)
-            {
-                handler(this, e);
-            }
-        }
-        public class DebugEventArgs : EventArgs
-        {
-            public string message { get; set; }
-        }
-
-
-        #endregion
-
         #region EventHandlers
         /// <summary>
         /// Event handler which toggles the <see cref="StayOpen"/> on and off.

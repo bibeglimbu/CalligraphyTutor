@@ -67,6 +67,18 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
+        private bool isChecked = false;
+        public bool IsChecked
+        {
+            get { return isChecked; }
+            set
+            {
+                isChecked = value;
+                Debug.WriteLine("IsChecked = " + IsChecked);
+                RaisePropertyChanged();
+            }
+        }
+
         private StrokeCollection _expertStrokes = new StrokeCollection();
         public StrokeCollection ExpertStrokes
         {
@@ -263,7 +275,19 @@ namespace CalligraphyTutor.ViewModel
         #endregion
 
         #region Events
+        private ICommand _stylusDown;
+        public ICommand ExpertCanvas_OnStylusDown
+        {
+            get
+            {
+                _stylusDown = new RelayCommand(
+                    param => OnStylusDown(param),
+                    null
+                    );
 
+                return _stylusDown;
+            }
+        }
         private ICommand _stylusMoved;
         public ICommand ExpertCanvas_OnStylusMoved
         {
@@ -291,7 +315,7 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        private void OnStylusMoved(object param)
+        private void OnStylusMoved(object Param)
         {
 
             //send data to learning hub if recording button is clicked
@@ -299,7 +323,7 @@ namespace CalligraphyTutor.ViewModel
             {
                 try
                 {
-                    StylusEventArgs args = (StylusEventArgs)param;
+                    StylusEventArgs args = (StylusEventArgs)Param;
                     SendDataAsync(args);
 
                 }
@@ -315,6 +339,20 @@ namespace CalligraphyTutor.ViewModel
             if (myConnectorHub == null)
             {
                 initLearningHub();
+            }
+
+        }
+
+        private void OnStylusDown(object Param)
+        {
+            StylusEventArgs args = (StylusEventArgs)Param;
+            if (IsChecked == true)
+            {
+                ((ExpertInkCanvas)args.Source).DisplayAnimation = false;
+            }
+            else
+            {
+                ((ExpertInkCanvas)args.Source).DisplayAnimation = true;
             }
 
         }

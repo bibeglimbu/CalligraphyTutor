@@ -95,7 +95,7 @@
 
         <Grid Grid.Row="2" >
             <TextBlock Margin="10,10,10,10" Background="Aquamarine"  Height="290"   Visibility="Hidden"
-                     Text="{Binding DebugText}"/>
+                     Text=""/>
         </Grid>
     </Grid>
     
