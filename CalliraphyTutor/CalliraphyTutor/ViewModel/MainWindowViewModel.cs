@@ -42,6 +42,12 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
+        private string _imageAddress = AppDomain.CurrentDomain.BaseDirectory + "\\images\\OUNL.jpg";
+        public string ImageAddress
+        {
+            get { return _imageAddress; }
+        }
+
         public class DebugEventArgs : EventArgs
         {
             public string message { get; set; }
@@ -53,6 +59,8 @@ namespace CalligraphyTutor.ViewModel
             get { return _CurrentViewModel; }
             set { SetProperty(ref _CurrentViewModel, value); }
         }
+
+
 
         //private UserControlViewModels UCVW;
         private ExpertViewModel expertViewModel;
@@ -139,5 +147,8 @@ namespace CalligraphyTutor.ViewModel
                     break;
             }
         }
+
+
+
     }
 }

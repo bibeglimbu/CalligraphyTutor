@@ -127,10 +127,10 @@ namespace CalligraphyTutor.ViewModel
             await Task.Run(() =>
             {
                 myConnectorHub = new ConnectorHub.ConnectorHub();
-                myConnectorHub.init();
-                myConnectorHub.sendReady();
-                myConnectorHub.startRecordingEvent += MyConnectorHub_startRecordingEvent;
-                myConnectorHub.stopRecordingEvent += MyConnectorHub_stopRecordingEvent;
+                myConnectorHub.Init();
+                myConnectorHub.SendReady();
+                myConnectorHub.StartRecordingEvent += MyConnectorHub_startRecordingEvent;
+                myConnectorHub.StopRecordingEvent += MyConnectorHub_stopRecordingEvent;
                 SetValueNames();
             });
         }
@@ -145,7 +145,7 @@ namespace CalligraphyTutor.ViewModel
             names.Add("Tilt_X");
             names.Add("Tilt_Y");
             names.Add("StrokeVelocity");
-            myConnectorHub.setValuesName(names);
+            myConnectorHub.SetValuesName(names);
 
         }
         
@@ -181,7 +181,7 @@ namespace CalligraphyTutor.ViewModel
                 }
                 values.Add(StrokeVelocity.ToString());
             }));
-            myConnectorHub.storeFrame(values);
+            myConnectorHub.StoreFrame(values);
             //globals.Speech.SpeakAsync("Student Data sent");
         }
 
@@ -324,7 +324,7 @@ namespace CalligraphyTutor.ViewModel
                 try
                 {
                     StylusEventArgs args = (StylusEventArgs)Param;
-                    SendDataAsync(args);
+                    //SendDataAsync(args);
 
                 }
                 catch (Exception ex)

@@ -1,4 +1,5 @@
 ﻿using CalligraphyTutor.Model;
+using CalligraphyTutor.StylusPlugins;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -7,6 +8,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -142,9 +144,32 @@ namespace CalligraphyTutor.ViewModel
         /// </summary>
         private bool StudentIsRecording = false;
 
+
         Globals globals;
         ConnectorHub.ConnectorHub myConnectorHub;
+
+        private bool _hitState = false;
+        public bool StudentHitState
+        {
+            get { return _hitState; }
+            set
+            {
+                _hitState = value;
+                RaisePropertyChanged("StudentHitState");
+            }
+        }
+
         #endregion
+
+        // Declare a System.Threading.CancellationTokenSource.
+        CancellationTokenSource cts;
+
+        //LogStylusDataPlugin logData;
+        private float PenPressure = 0f;
+        private float Tilt_X = 0f;
+        private float Tilt_Y = 0f;
+        private double StrokeVelocity = 0d;
+        private double StrokeDeviation = -0.01d;
 
         /// <summary>
         /// Constructor
@@ -155,10 +180,79 @@ namespace CalligraphyTutor.ViewModel
             globals = Globals.Instance;
             _studentTimer.Interval = new TimeSpan(10000);
             _studentTimer.Tick += AnimationTimer_Tick;
+            //logData = new LogStylusDataPlugin();
 
+            LogStylusDataPlugin.StylusMoveProcessEnded += LogData_StylusMoveProcessEnded;
             ResultsViewModel.ButtonClicked += ResultsViewModel_ButtonClicked;
             //assign the variables to be rorded in the learning hub
             
+        }
+
+        /// <summary>
+        /// Reference Expert Stroke
+        /// </summary>
+        Stroke expertStroke;
+        /// <summary>
+        /// Reference Expert StylusPoint
+        /// </summary>
+        StylusPoint expertStylusPoint;
+        /// <summary>
+        /// values for holding average expert velocity in each cycle
+        /// </summary>
+        private double ExpertVelocity = 0.0d;
+        /// <summary>
+        /// Event handlerfor handling onstylusmoveprocessedended events
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void LogData_StylusMoveProcessEnded(object sender, StylusMoveProcessEndedEventArgs e)
+        {
+            //if the expert stroke is loaded
+            if (ExpertStrokeLoaded == true)
+            {
+                //get the nearest stroke
+                expertStroke = SelectNearestExpertStroke(e.StrokeRef, ExpertStrokes);
+                if (expertStroke == null)
+                {
+                    Debug.WriteLine("expertstroke is null");
+                    return;
+                }
+                //return the nearest expert stylus point to be used as ref. Hit test is also performed with in this method.
+                expertStylusPoint = SelectExpertPoint(e.StrokeRef, expertStroke);
+                if(expertStylusPoint == null)
+                {
+                    Debug.WriteLine("expertstylusPoint is null");
+                    return;
+                }
+                //add a value to the expert average velocity to provide a area of error
+                ExpertVelocity = CalculateAverageExpertStrokeVelocity(expertStroke) + 5;
+                //this value has to be calculated for each cycle and stored. If calculated in repeated calls with in the same cycle it seems to return a different value
+                if (e.StrokeVelocity > ExpertVelocity)
+                    {
+                        //Debug.WriteLine("Expert'argsStroke average Velocity; "+ ExpertVelocity);
+                        //Debug.WriteLine("Student'argsStroke average Velocity; " + StudentSpeed);
+                        playSound(cts.Token);
+                    }
+                }
+            //send data to learning hub if the student is recording
+            if (this.StudentIsRecording == true)
+            {
+                try
+                {
+                    //assign the values
+                    PenPressure = e.Pressure;
+                    Tilt_X = e.XTilt;
+                    Tilt_Y = e.YTilt;
+                    StrokeVelocity = e.StrokeVelocity;
+                    SendDataAsync();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("failed sending data: " + ex.StackTrace);
+                }
+
+
+            }
         }
 
         private void MyConnectorHub_stopRecordingEvent(object sender)
@@ -207,9 +301,65 @@ namespace CalligraphyTutor.ViewModel
             _updateAnimation += 1;
         }
 
+        private ICommand _StylusDown;
+        /// <summary>
+        /// Icommand method for binding to the event.
+        /// </summary>
+        public ICommand StudentInkCanvas_StylusDown
+        {
+            get
+            {
+                _StylusDown = new RelayCommand(
+                    param => this.StudentView_OnStylusDown(param),
+                    null
+                    );
+
+                return _StylusDown;
+            }
+        }
+        private void StudentView_OnStylusDown(Object param)
+        {
+            Debug.WriteLine("PenDown");
+            //start async task
+            cts = new CancellationTokenSource();
+            
+        }
+
+        private ICommand _StylusUp;
+        /// <summary>
+        /// Icommand method for binding to the event.
+        /// </summary>
+        public ICommand StudentInkCanvas_StylusUp
+        {
+            get
+            {
+                _StylusUp = new RelayCommand(
+                    param => this.StudentView_OnStylusUp(param),
+                    null
+                    );
+
+                return _StylusUp;
+            }
+        }
+        private void StudentView_OnStylusUp(Object param)
+        {
+            Debug.WriteLine("PenUp");
+            //reset all value when the pen is lifted
+            PenPressure = 0f;
+            Tilt_X = 0f;
+            Tilt_Y = 0f;
+            StrokeVelocity = -0.01d;
+            StrokeDeviation = -0.01d;
+            //cancel async task
+            if (cts != null)
+            {
+                cts.Cancel();
+            }
+        }
+
         private ICommand _StylusMoved;
         /// <summary>
-        /// Icommand method for binding to the button.
+        /// Icommand method for binding to the event.
         /// </summary>
         public ICommand StudentInkCanvas_StylusMoved
         {
@@ -252,24 +402,17 @@ namespace CalligraphyTutor.ViewModel
                 //if the pen has moved a certain distance
                 if (v.Length > 2)
                 {
-                    //return the stylus point to be used as ref. Hit test is also performed with in this method.
-                    StylusPoint expertSP = SelectExpertPoint(args, ExpertStrokes);
 
-                    //calculate velocity
-                    if(CalculateStudentStrokeVelocity(args)> CalculateAverageExpertStrokeVelocity(currentStroke) && (DateTime.Now - PlayDateTime).Seconds > 1.5)
-                    {
-                        playSound();
-                    }
 
                         //check if the student is between the experts range, current issue with the pressure at 4000 level while drawn but changes to 1000 when stroke is created
-                        if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) > expertSP.GetPropertyValue(StylusPointProperties.NormalPressure) + 400)
+                        if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) > expertStylusPoint.GetPropertyValue(StylusPointProperties.NormalPressure) + 400)
                         {
                             //new Task(() => globals.Speech.SpeakAsync("Pressure too high")).Start();
                            //Debug.WriteLine("Pressure High" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
                         //if value is higher set the Expert pressure factor to -1 which produces darker color
                         ((StudentInkCanvas)args.Source).ExpertPressureFactor = -1;
                         }
-                        else if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) < expertSP.GetPropertyValue(StylusPointProperties.NormalPressure) - 400)
+                        else if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) < expertStylusPoint.GetPropertyValue(StylusPointProperties.NormalPressure) - 400)
                         {
                             //new Task(() => globals.Speech.SpeakAsync("Pressure too low")).Start();
                             //Debug.WriteLine("Pressure Low" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
@@ -282,29 +425,8 @@ namespace CalligraphyTutor.ViewModel
                         ((StudentInkCanvas)args.Source).ExpertPressureFactor = 0;
                     }
 
-                    //reset the point
+             //reset the point
                     prevPoint = pt;
-
-                    //send data to learning hub
-                    if (this.StudentIsRecording == true)
-                    {
-                        try
-                        {
-                            SendDataAsync(args, expertSP);
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.WriteLine("failed sending data: " + ex.StackTrace);
-                        }
-                    }
-                    else
-                    {
-                        //if (globals.Speech.State != SynthesizerState.Speaking)
-                        //{
-                        //    globals.Speech.SpeakAsync("student is Recording" + this.StudentIsRecording);
-                        //}
-
-                    }
                 }
             }
         }
@@ -317,10 +439,10 @@ namespace CalligraphyTutor.ViewModel
             await Task.Run(() =>
             {
                 myConnectorHub = new ConnectorHub.ConnectorHub();
-                myConnectorHub.init();
-                myConnectorHub.sendReady();
-                myConnectorHub.startRecordingEvent += MyConnectorHub_startRecordingEvent;
-                myConnectorHub.stopRecordingEvent += MyConnectorHub_stopRecordingEvent;
+                myConnectorHub.Init();
+                myConnectorHub.SendReady();
+                myConnectorHub.StartRecordingEvent += MyConnectorHub_startRecordingEvent;
+                myConnectorHub.StopRecordingEvent += MyConnectorHub_stopRecordingEvent;
                 SetValueNames();
             });
         }
@@ -339,17 +461,17 @@ namespace CalligraphyTutor.ViewModel
         }
 
         /// <summary>
-        /// Calls the <see cref="LearningHubManager"/>'s SetValueNames method which assigns the variables names for storing
+        /// Calls the <see cref="LearningHubManager"/>'argsStroke SetValueNames method which assigns the variables names for storing
         /// </summary>
         private void SetValueNames()
         {
             List<string> names = new List<string>();
-            names.Add("StrokeVelocity");
+            names.Add("StrokeSpeed");
             names.Add("PenPressure");
             names.Add("Tilt_X");
             names.Add("Tilt_Y");
             names.Add("StrokeDeviation");
-            myConnectorHub.setValuesName(names);
+            myConnectorHub.SetValuesName(names);
         }
 
         /// <summary>
@@ -357,39 +479,24 @@ namespace CalligraphyTutor.ViewModel
         /// </summary>
         /// <param name="args"></param>
         /// <param name="expertPoint"></param>
-        public async void SendDataAsync(StylusEventArgs args, StylusPoint expertPoint)
+        public async void SendDataAsync()
         {
-            await Task.Run(() => { SendData(args, expertPoint); });
+            await Task.Run(() => SendData());
         }
         /// <summary>
         /// Method for sending data
         /// </summary>
         /// <param name="args"></param>
         /// <param name="expertPoint"></param>
-        private void SendData(StylusEventArgs args, StylusPoint expertPoint)
+        private void SendData()
         {
             List<string> values = new List<string>();
-            Application.Current.Dispatcher.Invoke(new Action(() =>
-            {
-                
-                double StrokeVelocity = CalculateStudentStrokeVelocity(args);
-                if(Double.IsNaN(StrokeVelocity) || Double.IsInfinity(StrokeVelocity))
-                {
-                    StrokeVelocity = 0;
-                    Globals.Instance.Speech.SpeakAsync("double is not a number");
-                }
-                values.Add(StrokeVelocity.ToString());
-                String PenPressure = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
-                values.Add(PenPressure);
-                String Tilt_X = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.XTiltOrientation).ToString();
-                values.Add(Tilt_X);
-                String Tilt_Y = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.YTiltOrientation).ToString();
-                values.Add(Tilt_Y);
-                decimal StrokeDeviation = (decimal) CalcualteDistance(args.GetStylusPoints((InkCanvas)args.Source).Last().ToPoint(), expertPoint.ToPoint());
-                values.Add(StrokeDeviation.ToString());
-
-            }));
-            myConnectorHub.storeFrame(values);
+            values.Add(StrokeVelocity.ToString());
+            values.Add(PenPressure.ToString());
+            values.Add(Tilt_X.ToString());
+            values.Add(Tilt_Y.ToString());
+            values.Add(StrokeDeviation.ToString());
+            myConnectorHub.StoreFrame(values);
             //globals.Speech.SpeakAsync("Student Data sent");
         }
         #endregion
@@ -487,82 +594,89 @@ namespace CalligraphyTutor.ViewModel
 
         #endregion
 
-        /// <summary>
-        /// Method to calculate distance 
-        /// </summary>
-        /// <param name="startingPoint"></param>
-        /// <param name="finalPoint"></param>
-        /// <returns></returns>
-        public double CalcualteDistance(Point startingPoint, Point finalPoint )
+        private Stroke SelectNearestExpertStroke(Stroke argsStroke, StrokeCollection expertSC)
         {
-            double distance = Math.Sqrt(Math.Pow(Math.Abs(startingPoint.X - finalPoint.X), 2)
-                    + Math.Pow(Math.Abs(startingPoint.Y - finalPoint.Y), 2));
-
-            //divide the distance with PPI for the surface laptop to convert to inches and then multiply to change into mm
-            double distancePPI = (distance / 200)* 25.4;
-            return distancePPI;
+            //assign the first stroke to the temp stroke holder
+            Stroke stroke = expertSC[0];
+            //get the bouding rect of the args stroke
+            Rect rect = argsStroke.GetBounds();
+            //get the center point of the arg stroke for calculating the distance
+            Point centerPoint = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
+            //distance between the args stroke and the current expert stroke
+            double tempStrokeDistance = -0.1d;
+            //iterate through each stroke to find the nearest stroke
+            foreach (Stroke es in expertSC)
+            {
+                //bound each expert stroke with a rectangle, get the center position and calculate the distance between the 2 points
+                double distance = CalcualteDistance(centerPoint,
+                    new Point(es.GetBounds().Left + es.GetBounds().Width / 2, es.GetBounds().Top + es.GetBounds().Height / 2));
+                //if it is the first time running
+                if (tempStrokeDistance < 0)
+                {
+                    //assign the values and continue
+                    tempStrokeDistance = distance;
+                    stroke = es;
+                    continue;
+                }
+                //if it is not the first time running and the tempDistance is smaller than the tempStrokeDistance
+                if (distance < tempStrokeDistance)
+                {
+                    //assign the smallest distance and the stroke that gave that valie
+                    tempStrokeDistance = distance;
+                    stroke = es;
+                }
+            }
+            return stroke;
         }
-
-        /// <summary>
-        /// Stroke that holds the stroke to which the current styluspoint belongs to
-        /// </summary>
-        Stroke currentStroke;
         /// <summary>
         /// Method for returning the nearest styluspoint in the expert stroke from the point at which the pen is standing.
         /// </summary>
-        /// <param name="e">stylus args must be sent to cehange the dynamic rederer color</param>
+        /// <param name="s">Stroke formed from the event args styluspoint collection</param>
         /// <param name="SC"></param>
         /// <returns></returns>
-        private StylusPoint SelectExpertPoint(StylusEventArgs e, StrokeCollection SC)
+        private StylusPoint SelectExpertPoint(Stroke argsStroke, Stroke expertStroke)
         {
-            // Styluspoint that is closest to the current position of the pen
-            StylusPoint refStylusPoint = new StylusPoint();
-            Point point = new Point(double.NegativeInfinity, double.NegativeInfinity);
-            Application.Current.Dispatcher.Invoke(new Action(() => 
-            {
-                point = e.GetStylusPoints((InkCanvas)e.Source).Last().ToPoint();
-            }));
-            
-            // Value for storing the distance from the pen to the closest expert stylus point
-            double _strokeDeviation = -1.0d;
 
-            foreach (Stroke s in SC)
-            {
-                //iterate through all the stylus point
-                foreach (StylusPoint sp in s.StylusPoints)
+            // assign the first stylus point in the expert stroke as the refstyluspoint
+            StylusPoint refStylusPoint = expertStroke.StylusPoints[0];
+            //get the bouding rect of the args stroke
+            Rect rect = argsStroke.GetBounds();
+            //get the center point of the arg stroke for calculating the distance
+            Point centerPoint = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
+            //iterate through all the stylus point of expertstroke
+            foreach (StylusPoint sp in expertStroke.StylusPoints)
                 {
-                    //if the point lies exactly on top and hit test returns true, exit the whole loop and return the point.
-                    if (new Rect(sp.X, sp.Y, 10, 10).IntersectsWith(new Rect(point.X, point.Y, 10, 10)))
+                //calculate the distance from the point to the pen
+                double distance = CalcualteDistance(centerPoint, sp.ToPoint());
+                //if it is the first time, assign value and continue
+                if (StrokeDeviation < 0)
+                {
+                    StrokeDeviation = distance;
+                    continue;
+                }
+                //check if the current point in the expertstroke hits one of the argsStroke
+                if (argsStroke.HitTest(sp.ToPoint(), 5))
                     {
+                    //return the stylus point
                         refStylusPoint = sp;
-                        currentStroke = s;
-                        //change the color of the dynamic renderer to black
-                        ChangeStrokeColor(e, Colors.Green);
-                        //return to exit from the whole method
+                    //assing StrokeDeviation as 0
+                        StrokeDeviation = 0;
+                    //change the student hit state to true
+                        StudentHitState = true;
+                    //exit the wole loop
                         return refStylusPoint;
                     }
-                    //calculate the distance from the point to the pen
-                    double tempDisplacement = CalcualteDistance(point, sp.ToPoint());
-                    //if it is the first time the assign value and return
-                    if (_strokeDeviation < 0)
+                //if the point does not intersect the expert stroke, check if the new distance is smaller than the previous distance
+                if (distance < StrokeDeviation)
                     {
-                        _strokeDeviation = tempDisplacement;
+                    //assign the new shorter distance, and assign the new point as ref point
+                        StrokeDeviation = distance;
                         refStylusPoint = sp;
-                        currentStroke = s;
-                        continue;
-                    }
-                    //if the new distance is smaller than the previous distance, store the value
-                    if (tempDisplacement < _strokeDeviation)
-                    {
-                        _strokeDeviation = tempDisplacement;
-                        refStylusPoint = sp;
-                        currentStroke = s;
                     }
                 }
-                
-            }
             //if none of the points return a hit, change color and return the closest sp
-            ChangeStrokeColor(e, Colors.Red);
+            //ChangeStrokeColor(e, Colors.Red);
+            StudentHitState = false;
             return refStylusPoint;
         }
 
@@ -583,7 +697,7 @@ namespace CalligraphyTutor.ViewModel
             {
                 return;
             }
-            ((StudentInkCanvas)e.Source).StrokeColor = color;
+            //((StudentInkCanvas)e.Source).StrokeColor = color;
             _previousColor = color;
         }
 
@@ -596,41 +710,20 @@ namespace CalligraphyTutor.ViewModel
         /// variable used to calculate if the sound should be played.
         /// </summary>
         DateTime PlayDateTime = DateTime.Now;
-        /// <summary>
-        /// play the audio asynchronously
-        /// </summary>
-        public async void playSound()
-        {
-            System.Media.SoundPlayer player = new System.Media.SoundPlayer(directory + @"\Sounds\Error.wav");
-            PlayDateTime = DateTime.Now;
-            await Task.Run(()=>player.PlaySync());
-        }
 
-        private Point initVelocityPoint;
-        private DateTime initVelocityTime;
-        private Point finalVelocityPoint;
         /// <summary>
-        /// calculates the velocity of the stroke in seconds
+        /// play the audio asynchronously. the cancellation token cancells the lined up async task for this method
         /// </summary>
-        public double CalculateStudentStrokeVelocity(StylusEventArgs e)
+        public async void playSound(CancellationToken ct)
         {
-            Application.Current.Dispatcher.Invoke(new Action(() =>
+            System.Media.SoundPlayer player = new System.Media.SoundPlayer(directory + @"\sounds\Error.wav");
+            if((DateTime.Now-PlayDateTime).TotalSeconds > 1.5)
             {
-                //if it is the first time running assign the inital point and retrun
-                if (initVelocityPoint == null || initVelocityTime == null)
-                {
-                    initVelocityPoint = e.StylusDevice.GetStylusPoints((StudentInkCanvas)e.Source).Last().ToPoint();
-                    initVelocityTime = DateTime.Now;
-                    return;
-                }
-                //else assign the last point and 
-                finalVelocityPoint = e.StylusDevice.GetStylusPoints((StudentInkCanvas)e.Source).Last().ToPoint();
-            }));
-
-            double velocity = CalcualteDistance(initVelocityPoint, finalVelocityPoint)/ (DateTime.Now - initVelocityTime).TotalSeconds;
-            initVelocityPoint = finalVelocityPoint;
-            initVelocityTime = DateTime.Now;
-            return velocity;
+                PlayDateTime = DateTime.Now;
+                await Task.Run(() => player.PlaySync());
+                Debug.WriteLine(PlayDateTime);
+                
+            }
             
         }
 
@@ -641,14 +734,15 @@ namespace CalligraphyTutor.ViewModel
         public double CalculateAverageExpertStrokeVelocity(Stroke s)
         {
             GuidAttribute IMyInterfaceAttribute = (GuidAttribute)Attribute.GetCustomAttribute(typeof(ExpertInkCanvas), typeof(GuidAttribute));
-            Debug.WriteLine("IMyInterface Attribute: " + IMyInterfaceAttribute.Value);
+            //Debug.WriteLine("IMyInterface Attribute: " + IMyInterfaceAttribute.Value);
             Guid expertTimestamp = new Guid(IMyInterfaceAttribute.Value);
 
-            Debug.WriteLine("guids " + s.GetPropertyDataIds().Length);
+            //Debug.WriteLine("guids " + argsStroke.GetPropertyDataIds().Length);
             double totalStrokeLenght = 0;
             double velocity = 0;
             for (int i = 0; i < s.StylusPoints.Count - 1; i++)
             {
+                //add all the distance between each stylus points in the stroke
                 totalStrokeLenght += CalcualteDistance(s.StylusPoints[i].ToPoint(), s.StylusPoints[i + 1].ToPoint());
             }
 
@@ -663,9 +757,24 @@ namespace CalligraphyTutor.ViewModel
 
                 velocity = totalStrokeLenght / (timeStamps.Last() - timeStamps.First()).TotalSeconds;
             }
-
             return velocity;
 
+        }
+
+        /// <summary>
+        /// Method to calculate distance 
+        /// </summary>
+        /// <param name="startingPoint"></param>
+        /// <param name="finalPoint"></param>
+        /// <returns></returns>
+        public double CalcualteDistance(Point startingPoint, Point finalPoint)
+        {
+            //double distance = Math.Sqrt(Math.Pow(Math.Abs(startingPoint.X - finalPoint.X), 2)
+            //        + Math.Pow(Math.Abs(startingPoint.Y - finalPoint.Y), 2));
+            double distance = Point.Subtract(startingPoint, finalPoint).Length;
+            //distanceinmm = distance*(conversion factor from inch to mm)/parts per inch (which is the dot pitch)
+            double distanceInMm = (distance / 267) * 25.4;
+            return distanceInMm;
         }
     }
 }

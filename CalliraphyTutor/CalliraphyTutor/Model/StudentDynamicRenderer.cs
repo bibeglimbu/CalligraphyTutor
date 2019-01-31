@@ -13,15 +13,9 @@ namespace CalligraphyTutor.Model
     class StudentDynamicRenderer: DynamicRenderer
     {
         #region Vars & properties
-        private Color _c = Colors.Green;
-        public Color DefaultColor
-        {
-            get { return _c; }
-            set
-            {
-                _c = value;
-            }
-        }
+        //nullable bool true if the students stroke is hitting the expert Stroke
+        private bool IsColliding=false;
+
         /// <summary>
         /// value that holds if the pressure applied is higher or lower than the experts value
         /// </summary>
@@ -30,8 +24,22 @@ namespace CalligraphyTutor.Model
 
         public StudentDynamicRenderer()
         {
-            StudentInkCanvas.BrushColorChangedEvent += Canvas_BrushColorChangedEvent;
+            StudentInkCanvas.HitTestWithExpertEvent += StudentInkCanvas_HitTestWithExpertEvent;
             StudentInkCanvas.PressureChangedEvent += StudentInkCanvas_PressureChangedEvent;
+        }
+
+
+        private void StudentInkCanvas_HitTestWithExpertEvent(object sender, StudentInkCanvas.HitTestWithExpertEventArgs e)
+        {
+            //if the args state is the same as the old state
+            if (e.state == IsColliding)
+            {
+                return;
+            } else
+            {
+                //change the state and throw and event
+                IsColliding = e.state;
+            }
         }
 
         private void StudentInkCanvas_PressureChangedEvent(object sender, StudentInkCanvas.PressureChangedEventArgs e)
@@ -39,18 +47,22 @@ namespace CalligraphyTutor.Model
             pressureState = e.pressurefactor;
         }
 
-        private void Canvas_BrushColorChangedEvent(object sender, StudentInkCanvas.ColorChangedEventArgs e)
-        {
-            DefaultColor = e.color;
-        }
-
         protected override void OnDraw(DrawingContext drawingContext, StylusPointCollection stylusPoints,
                                        Geometry geometry, Brush fillBrush)
         {
-            //fillBrush = new SolidColorBrush(ChangeColorBrightness(DefaultColor, 0.5f));
-            foreach(StylusPoint s in stylusPoints)
+            Color RendererColor = Colors.Green;
+            if (IsColliding == true)
             {
-                fillBrush = new SolidColorBrush(ChangeColorBrightness(DefaultColor, (s.PressureFactor) * pressureState));
+                RendererColor = Colors.Green;
+            }
+
+            if (IsColliding == false)
+            {
+                RendererColor = Colors.Red;
+            }
+            foreach (StylusPoint s in stylusPoints)
+            {
+                fillBrush = new SolidColorBrush(ChangeColorBrightness(RendererColor, (s.PressureFactor) * pressureState));
                 base.OnDraw(drawingContext, stylusPoints, geometry, fillBrush);
             }
             

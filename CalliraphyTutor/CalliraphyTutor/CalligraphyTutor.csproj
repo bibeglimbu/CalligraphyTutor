@@ -36,7 +36,7 @@
   <ItemGroup>
     <Reference Include="ConnectorHub, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\LearningHub\ConnectorHub\bin\Debug\ConnectorHub.dll</HintPath>
+      <HintPath>..\..\..\..\Jan\LearningHub\HubDesktop\bin\Debug\ConnectorHub.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Expression.Interactions, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
     <Reference Include="System" />
@@ -72,6 +72,7 @@
     <Compile Include="Model\StudentDynamicRenderer.cs" />
     <Compile Include="Model\StudentInkCanvas.cs" />
     <Compile Include="Model\StudentStroke.cs" />
+    <Compile Include="StylusPlugins\LogStylusDataPlugin.cs" />
     <Compile Include="ViewModel\ExpertViewModel.cs" />
     <Compile Include="ViewModel\Globals.cs" />
     <Compile Include="ViewModel\MainViewModel.cs" />
@@ -142,21 +143,23 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
-    <Resource Include="Resources\BLACKCHANCERY.TTF">
+    <Content Include="Resources\BLACKCHANCERY.TTF">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <Resource Include="Images\OUNL.jpg">
+    <Content Include="Images\OUNL.jpg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
+    </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Sounds\Error.aiff" />
+    <Content Include="sounds\Error.aiff">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

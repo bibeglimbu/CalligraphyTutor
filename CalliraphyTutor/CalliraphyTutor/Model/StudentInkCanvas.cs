@@ -1,4 +1,5 @@
-﻿using CalligraphyTutor.ViewModel;
+﻿using CalligraphyTutor.StylusPlugins;
+using CalligraphyTutor.ViewModel;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,6 +17,51 @@ namespace CalligraphyTutor.Model
     class StudentInkCanvas: InkCanvas
     {
         #region vars
+
+        /// <summary>
+        /// Dependency property for binding the shit state from view model
+        /// </summary>
+        public static DependencyProperty StrokeHitStateProperty = DependencyProperty.Register("StrokeHitState", typeof(bool), typeof(StudentInkCanvas), 
+            new FrameworkPropertyMetadata(default(bool), new PropertyChangedCallback(OnStrokeHitStateChanged)));
+        /// <summary>
+        /// event thrown by the dependecy property used for updating the property
+        /// </summary>
+        /// <param name="d"></param>
+        /// <param name="e"></param>
+        private static void OnStrokeHitStateChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            //Debug.WriteLine(e.NewValue);
+            ((StudentInkCanvas)d).StrokeHitState = (bool)e.NewValue;
+        }
+
+        /// <summary>
+        /// Property which determines the default color based on hittest state with expert stroke
+        /// </summary>
+        public bool StrokeHitState
+        {
+            get { return (bool)GetValue(StrokeHitStateProperty); }
+            set
+            {
+                
+                HitTestWithExpertEventArgs args = new HitTestWithExpertEventArgs();
+                args.state = value;
+                //raise hit test value changed event
+                OnHitTestWithExpert(args);
+                if (value == true)
+                {
+                    StrokeColor = Colors.Green;
+                }
+                if (value == false)
+                {
+                    StrokeColor = Colors.Red;
+                }
+                //Add stroke when color changes
+                AddStroke(_tempSPCollection, prevColor);
+                prevColor = StrokeColor;
+                SetValue(StrokeHitStateProperty, value);
+            }
+        }
+
         /// <summary>
         /// Reference StylusPointCollection used for adding new stroke on hit test.
         /// </summary>
@@ -24,27 +70,10 @@ namespace CalligraphyTutor.Model
         /// <summary>
         /// Custom Renderer for chaning the behaviour of the ink as it is being drawn
         /// </summary>
-        private StudentDynamicRenderer studentCustomRenderer;
+        private StudentDynamicRenderer studentCustomRenderer = new StudentDynamicRenderer();
 
-        private Color _c = Colors.Green;
-        /// <summary>
-        /// Property which determines the default color of the stroke
-        /// </summary>
-        public Color StrokeColor
-        {
-            get { return _c; }
-            set
-            {
-                _c = value;
-                //change the dynamic rendere color
-                ColorChangedEventArgs args = new ColorChangedEventArgs();
-                args.color = _c;
-                OnBrushColorChanged(args);
-                //Add stroke when color changes
-                AddStroke(_tempSPCollection, prevColor);
-                prevColor = _c;
-            }
-        }
+
+        private Color StrokeColor = Colors.Green;
 
         /// <summary>
         /// Value that holds if the pressure applied is higher or lower that the experts. Must return either -1,0 or 1
@@ -52,6 +81,7 @@ namespace CalligraphyTutor.Model
         private int expertPressureFactor = 0;
         public int ExpertPressureFactor
         {
+
             get { return expertPressureFactor; }
             set
             {
@@ -66,6 +96,8 @@ namespace CalligraphyTutor.Model
 
         Guid studentTimestamp = new Guid("12345678-9012-3456-7890-123456789012");
         List<DateTime> StrokeTime = new List<DateTime>();
+
+        LogStylusDataPlugin logStylusDataPlugin = new LogStylusDataPlugin();
         #endregion
 
         //declare the class singleton as we only need one instance in a window
@@ -75,7 +107,7 @@ namespace CalligraphyTutor.Model
         /// <summary>
         /// Constructor
         /// </summary>
-        public StudentInkCanvas()
+        public StudentInkCanvas():base()
         {
             _tempSPCollection = new StylusPointCollection();
             //instantiate the customDynamicRenderer
@@ -83,6 +115,8 @@ namespace CalligraphyTutor.Model
             this.DynamicRenderer = studentCustomRenderer;
             Debug.WriteLine("InkPresenter status: " + this.InkPresenter.IsEnabled);
             prevColor = StrokeColor;
+
+            this.StylusPlugIns.Add(logStylusDataPlugin);
         }
 
         #region events definition
@@ -101,20 +135,20 @@ namespace CalligraphyTutor.Model
         }
 
         /// <summary>
-        /// event that notifies that the color has changed
+        /// event that notifies that the hittest was detected
         /// </summary>
-        public static event EventHandler<ColorChangedEventArgs> BrushColorChangedEvent;
-        protected virtual void OnBrushColorChanged(ColorChangedEventArgs c)
+        public static event EventHandler<HitTestWithExpertEventArgs> HitTestWithExpertEvent;
+        protected virtual void OnHitTestWithExpert(HitTestWithExpertEventArgs e)
         {
-            EventHandler<ColorChangedEventArgs> handler = BrushColorChangedEvent;
+            EventHandler<HitTestWithExpertEventArgs> handler = HitTestWithExpertEvent;
             if (handler != null)
             {
-                handler(this, c);
+                handler(this, e);
             }
         }
-        public class ColorChangedEventArgs : EventArgs
+        public class HitTestWithExpertEventArgs : EventArgs
         {
-            public Color color { get; set; }
+            public bool state { get; set; }
         }
 
         /// <summary>

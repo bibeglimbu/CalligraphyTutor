@@ -12,7 +12,8 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="0.4*"/>
             <RowDefinition Height="1.4*"/>
-            <RowDefinition Height="0.2*"/>
+            <RowDefinition Height="0.3*"/>
+            <RowDefinition Height="0.1*"/>
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0" HorizontalAlignment="Center">
             <Button  Content="{Binding RecordButtonName}" Background="{Binding RecordButtonColor}"
@@ -72,10 +73,18 @@
               X1="0" X2="{Binding ScreenWidth}" >
             </Line>
 
-            <Model:StudentInkCanvas Height="300" Strokes="{Binding StudentStrokes}" Background="Transparent">
+            <Model:StudentInkCanvas Height="300" Strokes="{Binding StudentStrokes}" Background="Transparent" StrokeHitState="{Binding StudentHitState, Mode=TwoWay}">
                 <i:Interaction.Triggers>
                     <i:EventTrigger EventName="StylusMove">
                         <Model:InvokeDelegateCommandAction Command="{Binding StudentInkCanvas_StylusMoved}"
+                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
+                    </i:EventTrigger>
+                    <i:EventTrigger EventName="StylusDown">
+                        <Model:InvokeDelegateCommandAction Command="{Binding StudentInkCanvas_StylusDown}"
+                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
+                    </i:EventTrigger>
+                    <i:EventTrigger EventName="StylusUp">
+                        <Model:InvokeDelegateCommandAction Command="{Binding StudentInkCanvas_StylusUp}"
                                                            CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
                     </i:EventTrigger>
                 </i:Interaction.Triggers>
