@@ -21,7 +21,7 @@ namespace CalligraphyTutor.Model
         #region vars
 
         Globals globals;
-        private Color _color = Colors.Black;
+        private Color _color = Colors.Red;
         public Color StrokeColor
         {
             get { return _color; }
@@ -31,18 +31,20 @@ namespace CalligraphyTutor.Model
             }
         }
 
+        private bool PressureChecked = false;
         Guid studentTimestamp = new Guid("12345678-9012-3456-7890-123456789012");
         #endregion
 
-        public StudentStroke(StylusPointCollection stylusPoints) : base(stylusPoints)
+        public StudentStroke(StylusPointCollection stylusPoints, bool PressureChecked) : base(stylusPoints)
         {
             globals = Globals.Instance;
-
+            this.PressureChecked = PressureChecked;
         }
 
-        public StudentStroke(StylusPointCollection stylusPoints, Color c) : base(stylusPoints)
+        public StudentStroke(StylusPointCollection stylusPoints, Color c,bool PressureChecked) : base(stylusPoints)
         {
             StrokeColor = c;
+            this.PressureChecked = PressureChecked;
             globals = Globals.Instance;
 
         }
@@ -58,8 +60,13 @@ namespace CalligraphyTutor.Model
                     timeStamps.Add(dt);
                 }
                 Debug.WriteLine(timeStamps.Count);
-                Debug.WriteLine("Total time taken to draw the stroke "+ (timeStamps.Last() - timeStamps.First()).TotalSeconds);
+                //Debug.WriteLine("Total time taken to draw the stroke "+ (timeStamps.Last() - timeStamps.First()).TotalSeconds);
             }
+            if (PressureChecked==true)
+            {
+                StrokeColor = Color.FromArgb(Convert.ToByte(255 * this.StylusPoints[this.StylusPoints.Count / 2].PressureFactor), StrokeColor.R, StrokeColor.G, StrokeColor.B);
+            }
+            
             drawingAttributes.Color = StrokeColor;
             drawingAttributes.Width = globals.StrokeWidth;
             drawingAttributes.Height = globals.StrokeHeight;

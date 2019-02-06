@@ -19,15 +19,22 @@ namespace CalligraphyTutor.Model
         /// <summary>
         /// value that holds if the pressure applied is higher or lower than the experts value
         /// </summary>
-        private int pressureState = 0;
+        // private int pressureState = 0;
         #endregion
+
+        private bool IsPressureChecked = false;
 
         public StudentDynamicRenderer()
         {
             StudentInkCanvas.HitTestWithExpertEvent += StudentInkCanvas_HitTestWithExpertEvent;
-            StudentInkCanvas.PressureChangedEvent += StudentInkCanvas_PressureChangedEvent;
+            //StudentInkCanvas.PressureChangedEvent += StudentInkCanvas_PressureChangedEvent;
+            StudentInkCanvas.PressureCheckedEvent += StudentInkCanvas_PressureCheckedEvent;
         }
 
+        private void StudentInkCanvas_PressureCheckedEvent(object sender, StudentInkCanvas.PressureCheckedEventArgs e)
+        {
+            IsPressureChecked = e.state;
+        }
 
         private void StudentInkCanvas_HitTestWithExpertEvent(object sender, StudentInkCanvas.HitTestWithExpertEventArgs e)
         {
@@ -42,35 +49,33 @@ namespace CalligraphyTutor.Model
             }
         }
 
-        private void StudentInkCanvas_PressureChangedEvent(object sender, StudentInkCanvas.PressureChangedEventArgs e)
-        {
-            pressureState = e.pressurefactor;
-        }
+        //private void StudentInkCanvas_PressureChangedEvent(object sender, StudentInkCanvas.PressureChangedEventArgs e)
+        //{
+        //    pressureState = e.pressurefactor;
+        //}
 
         protected override void OnDraw(DrawingContext drawingContext, StylusPointCollection stylusPoints,
                                        Geometry geometry, Brush fillBrush)
         {
-            Color RendererColor = Colors.Green;
+            Color StrokeColor = Colors.Red;
             if (IsColliding == true)
             {
-                RendererColor = Colors.Green;
+                StrokeColor = Colors.Green;
             }
 
             if (IsColliding == false)
             {
-                RendererColor = Colors.Red;
+                StrokeColor = Colors.Red;
             }
-            foreach (StylusPoint s in stylusPoints)
+            //if pressure feedback is requested
+            if (IsPressureChecked)
             {
-                fillBrush = new SolidColorBrush(ChangeColorBrightness(RendererColor, (s.PressureFactor) * pressureState));
-                base.OnDraw(drawingContext, stylusPoints, geometry, fillBrush);
+                StrokeColor = Color.FromArgb(Convert.ToByte(255 * stylusPoints[stylusPoints.Count / 2].PressureFactor), StrokeColor.R, StrokeColor.G, StrokeColor.B);
             }
-            
-        }
+            fillBrush = new SolidColorBrush(StrokeColor);
+                base.OnDraw(drawingContext, stylusPoints, geometry, fillBrush);
 
-        protected override void OnStylusMove(RawStylusInput rawStylusInput)
-        {
-            base.OnStylusMove(rawStylusInput);
+            
         }
 
         protected override void OnStylusDown(RawStylusInput rawStylusInput)

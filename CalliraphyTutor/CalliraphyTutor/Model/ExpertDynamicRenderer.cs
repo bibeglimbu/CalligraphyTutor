@@ -13,8 +13,8 @@ namespace CalligraphyTutor.Model
     class ExpertDynamicRenderer: DynamicRenderer
     {
         #region Vars & properties
-        private Color _c = Colors.Black;
-        public Color DefaultColor
+        private Color _c = Colors.Purple;
+        public Color StrokeColor
         {
             get { return _c; }
             set
@@ -33,7 +33,8 @@ namespace CalligraphyTutor.Model
         protected override void OnDraw(DrawingContext drawingContext, StylusPointCollection stylusPoints,
                                        Geometry geometry, Brush fillBrush)
         {
-            fillBrush = new SolidColorBrush(DefaultColor);
+            StrokeColor = Color.FromArgb(Convert.ToByte(255 * stylusPoints[stylusPoints.Count / 2].PressureFactor), StrokeColor.R, StrokeColor.G, StrokeColor.B);
+            fillBrush = new SolidColorBrush(StrokeColor);
             base.OnDraw(drawingContext, stylusPoints, geometry, fillBrush);
         }
 

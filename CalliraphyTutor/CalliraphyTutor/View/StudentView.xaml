@@ -12,7 +12,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="0.4*"/>
             <RowDefinition Height="1.4*"/>
-            <RowDefinition Height="0.3*"/>
+            <RowDefinition Height="0.1*"/>
             <RowDefinition Height="0.1*"/>
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0" HorizontalAlignment="Center">
@@ -73,7 +73,9 @@
               X1="0" X2="{Binding ScreenWidth}" >
             </Line>
 
-            <Model:StudentInkCanvas Height="300" Strokes="{Binding StudentStrokes}" Background="Transparent" StrokeHitState="{Binding StudentHitState, Mode=TwoWay}">
+            <Model:StudentInkCanvas Height="300" Strokes="{Binding StudentStrokes, Mode=TwoWay}" Background="Transparent" StrokeHitState="{Binding StudentHitState, Mode=TwoWay}"
+                StrokeChecked="{Binding ElementName=StrokeCheckBox, Path=IsChecked, Mode=TwoWay}" 
+                PressureChecked = "{Binding ElementName=PressureCheckBox, Path=IsChecked, Mode=TwoWay}" >
                 <i:Interaction.Triggers>
                     <i:EventTrigger EventName="StylusMove">
                         <Model:InvokeDelegateCommandAction Command="{Binding StudentInkCanvas_StylusMoved}"
@@ -93,8 +95,17 @@
         </Grid>
 
         <Grid Grid.Row="2" HorizontalAlignment="Center">
+            <DockPanel>
+                <CheckBox x:Name="PressureCheckBox" Grid.Column="0" IsChecked="{Binding PressureIsChecked, Mode=TwoWay}">Pressure</CheckBox>
+                <CheckBox Grid.Column="0" IsChecked="{Binding SpeedIsChecked, Mode=TwoWay}">Speed</CheckBox>
+                <CheckBox x:Name="StrokeCheckBox" Grid.Column="0" IsChecked="{Binding StrokeIsChecked, Mode=TwoWay}">Stroke</CheckBox>
+            </DockPanel>
+        </Grid>
+
+        <Grid Grid.Row="3" HorizontalAlignment="Center">
             <TextBlock>Load expert data to begin the session.</TextBlock>
         </Grid>
+
 
         <Popup IsOpen="{Binding StayOpen}" Placement="Center">
             <local:Results/>

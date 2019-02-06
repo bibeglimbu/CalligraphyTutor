@@ -1,4 +1,5 @@
-﻿using CalligraphyTutor.ViewModel;
+﻿using CalligraphyTutor.StylusPlugins;
+using CalligraphyTutor.ViewModel;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -38,11 +39,13 @@ namespace CalligraphyTutor.Model
             }
         }
 
-        public static DependencyProperty DisplayAnimationProperty = DependencyProperty.RegisterAttached(
-            "DisplayAnimation", typeof(bool), typeof(ExpertInkCanvas), new PropertyMetadata());
+        //public static DependencyProperty DisplayAnimationProperty = DependencyProperty.RegisterAttached(
+        //    "DisplayAnimation", typeof(bool), typeof(ExpertInkCanvas), new PropertyMetadata());
   
         Guid expertTimestamp = new Guid("12345678-9012-3456-7890-123456789013");
         List<DateTime> StrokeTime = new List<DateTime>();
+
+        LogStylusDataPlugin logStylusData = new LogStylusDataPlugin();
 
         #endregion
 
@@ -53,7 +56,10 @@ namespace CalligraphyTutor.Model
             _dispatchTimer.Interval = new TimeSpan(10000);
             _dispatchTimer.Tick += _dispatchTimer_Tick;
             StudentInkCanvas.PenDownUpEvent += StudentInkCanvas_PenDownUpEvent;
+            this.StylusPlugIns.Add(logStylusData);
+
         }
+
 
         #region EventHandlers
         private void StudentInkCanvas_PenDownUpEvent(object sender, EventArgs e)
@@ -105,16 +111,17 @@ namespace CalligraphyTutor.Model
             this.Strokes.Remove(e.Stroke);
             if (e.Stroke.StylusPoints.Count > 2)
             {
-                Debug.WriteLine("after filtering " + e.Stroke.StylusPoints.Count);
-                ExpertStroke customStroke = FilterExpertData( new ExpertStroke(e.Stroke.StylusPoints));
-                Debug.WriteLine("after filtering " + customStroke.StylusPoints.Count);
+                //Debug.WriteLine("after filtering " + e.Stroke.StylusPoints.Count);
+                //ExpertStroke customStroke = FilterExpertData( new ExpertStroke(e.Stroke.StylusPoints));
+                ExpertStroke customStroke = new ExpertStroke(e.Stroke.StylusPoints);
+                //Debug.WriteLine("after filtering " + customStroke.StylusPoints.Count);
                 customStroke.AddPropertyData(expertTimestamp, StrokeTime.ToArray());
                 this.InkPresenter.Strokes.Add(customStroke);
             }
             StrokeTime = new List<DateTime>();
         }
 
-            private void ToggleDispatchTimer()
+        private void ToggleDispatchTimer()
         {
             Globals.Instance.IsStylusDown = !Globals.Instance.IsStylusDown;
         }
@@ -163,7 +170,8 @@ namespace CalligraphyTutor.Model
                     };
                     double left = p.X - (ellipse.Width / 2);
                     double top = p.Y - (ellipse.Height / 2);
-                    ellipse.Fill = new SolidColorBrush(Colors.Purple);
+                    Color EllipseColor = Color.FromArgb(180, 128, 0, 128);
+                    ellipse.Fill = new SolidColorBrush(EllipseColor);
                     ellipse.Margin = new Thickness(left, top, 0, 0);
                     this.Children.Add(ellipse);
                     ChildEllipseHolder.Add(ellipse);

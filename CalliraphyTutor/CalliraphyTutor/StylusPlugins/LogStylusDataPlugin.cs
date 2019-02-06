@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CalligraphyTutor.Model;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,11 +19,11 @@ namespace CalligraphyTutor.StylusPlugins
         public float XTilt { get; set; }
         public float YTilt { get; set; }
         public double StrokeVelocity { get; set; }
-
     }
 
     class LogStylusDataPlugin : StylusPlugIn
     {
+        
         public static event EventHandler<StylusMoveProcessEndedEventArgs> StylusMoveProcessEnded;
         protected virtual void OnStylusMoveProcessEnded(StylusMoveProcessEndedEventArgs e)
         {
@@ -58,6 +59,7 @@ namespace CalligraphyTutor.StylusPlugins
             // Call the base class before modifying the data.
             base.OnStylusMove(rawStylusInput);
             StylusPointCollection spc = new StylusPointCollection(rawStylusInput.GetStylusPoints());
+            //spCollection.Add(spc);
             rawStylusInput.NotifyWhenProcessed(spc);
             
         }

@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -22,16 +23,6 @@ namespace CalligraphyTutor.ViewModel
     public class StudentViewModel: BindableBase
     {
         #region Vars & properties
-
-        /// <summary>
-        /// Frames of the stroke animation
-        /// </summary>
-        private int _updateAnimation = 0;
-
-        /// <summary>
-        /// Timer for controlling all animtion in student mode
-        /// </summary>
-        private DispatcherTimer _studentTimer = new DispatcherTimer();
 
         //Helps set the screen size of the application in the view
         private int _screenWidth = (int)SystemParameters.PrimaryScreenWidth;
@@ -123,8 +114,8 @@ namespace CalligraphyTutor.ViewModel
                 _expertStrokesLoaded = value;
             }
         }
-        //var for turning the pop up on and off
 
+        //for turing the popon on and off
         private bool _stayOpen = false;
         /// <summary>
         /// Indicates if the <see cref="ResultsViewModel"/> is open or not.
@@ -144,11 +135,10 @@ namespace CalligraphyTutor.ViewModel
         /// </summary>
         private bool StudentIsRecording = false;
 
-
-        Globals globals;
-        ConnectorHub.ConnectorHub myConnectorHub;
-
         private bool _hitState = false;
+        /// <summary>
+        /// true if the current point is hitting the expert point
+        /// </summary>
         public bool StudentHitState
         {
             get { return _hitState; }
@@ -159,7 +149,47 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        #endregion
+        bool _pressureChecked = false;
+        /// <summary>
+        /// Check if you want feedback on pressure
+        /// </summary>
+        public bool PressureIsChecked
+        {
+            get { return _pressureChecked; }
+            set
+            {
+                _pressureChecked = value;
+                RaisePropertyChanged("PressureIsChecked");
+            }
+        }
+
+        bool _speedChecked = false;
+        /// <summary>
+        /// Check if you want feedback on speed
+        /// </summary>
+        public bool SpeedIsChecked
+        {
+            get { return _speedChecked; }
+            set
+            {
+                _speedChecked = value;
+                RaisePropertyChanged("SpeedIsChecked");
+            }
+        }
+
+        bool _strokeChecked = false;
+        /// <summary>
+        /// Check if you want feedback on Stroke
+        /// </summary>
+        public bool StrokeIsChecked
+        {
+            get { return _strokeChecked; }
+            set
+            {
+                _strokeChecked = value;
+                RaisePropertyChanged("StrokeIsChecked");
+            }
+        }
 
         // Declare a System.Threading.CancellationTokenSource.
         CancellationTokenSource cts;
@@ -169,7 +199,15 @@ namespace CalligraphyTutor.ViewModel
         private float Tilt_X = 0f;
         private float Tilt_Y = 0f;
         private double StrokeVelocity = 0d;
+        /// <summary>
+        /// Strove deviation calculated base don the distance from the expert point
+        /// </summary>
         private double StrokeDeviation = -0.01d;
+
+        Globals globals;
+        ConnectorHub.ConnectorHub myConnectorHub;
+
+        #endregion
 
         /// <summary>
         /// Constructor
@@ -178,14 +216,13 @@ namespace CalligraphyTutor.ViewModel
         {
 
             globals = Globals.Instance;
-            _studentTimer.Interval = new TimeSpan(10000);
-            _studentTimer.Tick += AnimationTimer_Tick;
+            //_studentTimer.Interval = new TimeSpan(10000);
+           // _studentTimer.Tick += AnimationTimer_Tick;
             //logData = new LogStylusDataPlugin();
 
             LogStylusDataPlugin.StylusMoveProcessEnded += LogData_StylusMoveProcessEnded;
             ResultsViewModel.ButtonClicked += ResultsViewModel_ButtonClicked;
             //assign the variables to be rorded in the learning hub
-            
         }
 
         /// <summary>
@@ -196,6 +233,7 @@ namespace CalligraphyTutor.ViewModel
         /// Reference Expert StylusPoint
         /// </summary>
         StylusPoint expertStylusPoint;
+        private int expertPressureFactor = 0;
         /// <summary>
         /// values for holding average expert velocity in each cycle
         /// </summary>
@@ -219,21 +257,51 @@ namespace CalligraphyTutor.ViewModel
                 }
                 //return the nearest expert stylus point to be used as ref. Hit test is also performed with in this method.
                 expertStylusPoint = SelectExpertPoint(e.StrokeRef, expertStroke);
-                if(expertStylusPoint == null)
+                if (expertStylusPoint == null)
                 {
                     Debug.WriteLine("expertstylusPoint is null");
                     return;
                 }
-                //add a value to the expert average velocity to provide a area of error
-                ExpertVelocity = CalculateAverageExpertStrokeVelocity(expertStroke) + 5;
-                //this value has to be calculated for each cycle and stored. If calculated in repeated calls with in the same cycle it seems to return a different value
-                if (e.StrokeVelocity > ExpertVelocity)
+
+                //give feedback on speed
+                if (SpeedIsChecked == true)
+                {
+                    //add a value to the expert average velocity to provide a area of error
+                    ExpertVelocity = CalculateAverageExpertStrokeVelocity(expertStroke) + 5;
+                    //this value has to be calculated for each cycle and stored. If calculated in repeated calls with in the same cycle it seems to return a different value
+                    if (e.StrokeVelocity > ExpertVelocity)
                     {
                         //Debug.WriteLine("Expert'argsStroke average Velocity; "+ ExpertVelocity);
                         //Debug.WriteLine("Student'argsStroke average Velocity; " + StudentSpeed);
                         playSound(cts.Token);
                     }
                 }
+                //give feeedback on Pressure
+                if (PressureIsChecked == true)
+                {
+                    //check if the student is between the experts range, current issue with the pressure at 4000 level while drawn but changes to 1000 when stroke is created
+                    if (e.Pressure > expertStylusPoint.GetPropertyValue(StylusPointProperties.NormalPressure) + 400)
+                    {
+                        //new Task(() => globals.Speech.SpeakAsync("Pressure too high")).Start();
+                        //Debug.WriteLine("Pressure High" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
+                        //if value is higher set the Expert pressure factor to -1 which produces darker color
+                        expertPressureFactor = -1;
+                    }
+                    else if (e.Pressure < expertStylusPoint.GetPropertyValue(StylusPointProperties.NormalPressure) - 400)
+                    {
+                        //new Task(() => globals.Speech.SpeakAsync("Pressure too low")).Start();
+                        //Debug.WriteLine("Pressure Low" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
+                        //if value is higher set the Expert pressure factor to +1 which produces lighter color
+                        expertPressureFactor = 1;
+                    }
+                    else
+                    {
+                        //if the value is with in the range set it to 0 which produces no change
+                        expertPressureFactor = 0;
+                    }
+                }
+                
+            }
             //send data to learning hub if the student is recording
             if (this.StudentIsRecording == true)
             {
@@ -291,16 +359,6 @@ namespace CalligraphyTutor.ViewModel
             //}
         }
 
-        /// <summary>
-        /// Event handler for everytime the timer is updated
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void AnimationTimer_Tick(object sender, EventArgs e)
-        {
-            _updateAnimation += 1;
-        }
-
         private ICommand _StylusDown;
         /// <summary>
         /// Icommand method for binding to the event.
@@ -321,6 +379,21 @@ namespace CalligraphyTutor.ViewModel
         {
             Debug.WriteLine("PenDown");
             //start async task
+            StylusEventArgs args = (StylusEventArgs)param;
+            //give feedback on Stroke
+            if (StrokeIsChecked == true)
+            {
+                foreach (Stroke s in ExpertStrokes)
+                {
+                    if (s.HitTest(args.GetStylusPoints((InkCanvas)args.Source).Last().ToPoint(), 5) == true)
+                    {
+                        StudentHitState = true;
+                        break;
+                    }
+                }
+
+            }
+
             cts = new CancellationTokenSource();
             
         }
@@ -388,47 +461,15 @@ namespace CalligraphyTutor.ViewModel
                 return;
             }
                 
-            //once the expert styluspoints are loaded
-            if (ExpertStrokeLoaded == true)
-            {
-                //get the last point of the collection and the refernce expert point for it
-                StylusPoint studentSP = args.GetStylusPoints((InkCanvas)args.Source).Last();
-
-                //point for looping only at specific intervals
-                //store the last point of the last interval
-                Point pt = studentSP.ToPoint();
-                Vector v = Point.Subtract(prevPoint, pt);
-
-                //if the pen has moved a certain distance
-                if (v.Length > 2)
-                {
-
-
-                        //check if the student is between the experts range, current issue with the pressure at 4000 level while drawn but changes to 1000 when stroke is created
-                        if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) > expertStylusPoint.GetPropertyValue(StylusPointProperties.NormalPressure) + 400)
-                        {
-                            //new Task(() => globals.Speech.SpeakAsync("Pressure too high")).Start();
-                           //Debug.WriteLine("Pressure High" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
-                        //if value is higher set the Expert pressure factor to -1 which produces darker color
-                        ((StudentInkCanvas)args.Source).ExpertPressureFactor = -1;
-                        }
-                        else if (studentSP.GetPropertyValue(StylusPointProperties.NormalPressure) < expertStylusPoint.GetPropertyValue(StylusPointProperties.NormalPressure) - 400)
-                        {
-                            //new Task(() => globals.Speech.SpeakAsync("Pressure too low")).Start();
-                            //Debug.WriteLine("Pressure Low" + studentSP.GetPropertyValue(StylusPointProperties.NormalPressure));
-                        //if value is higher set the Expert pressure factor to +1 which produces lighter color
-                        ((StudentInkCanvas)args.Source).ExpertPressureFactor = 1;
-                    }
-                    else
-                    {
-                        //if the value is with in the range set it to 0 which produces no change
-                        ((StudentInkCanvas)args.Source).ExpertPressureFactor = 0;
-                    }
-
-             //reset the point
-                    prevPoint = pt;
-                }
-            }
+            ////once the expert styluspoints are loaded
+            //if (ExpertStrokeLoaded == true && PressureIsChecked==true)
+            //{
+            //    ((StudentInkCanvas)args.Source).ExpertPressureFactor = expertPressureFactor;
+            //}
+            //else
+            //{
+            //    ((StudentInkCanvas)args.Source).ExpertPressureFactor = 0;
+            //}
         }
         #endregion
 
@@ -523,8 +564,16 @@ namespace CalligraphyTutor.ViewModel
         {
             //when the stroke is loaded initiate the learning hub. Having it in constructors will not work
             initLearningHub();
-            ExpertStrokes = new StrokeCollection(FileManager.Instance.LoadStroke());
+            StrokeCollection tempStrokeCollection = new StrokeCollection();
+            tempStrokeCollection = FileManager.Instance.LoadStroke();
+            if(tempStrokeCollection==null || tempStrokeCollection.Count == 0)
+            {
+                Debug.WriteLine("No Strokes Found");
+                return;
+            }
+            ExpertStrokes = tempStrokeCollection;
             Debug.WriteLine("guids " + ExpertStrokes[ExpertStrokes.Count - 1].GetPropertyDataIds().Length);
+           
             ExpertStrokeLoaded = true;
             //start the timer
             //_studentTimer.Start();
@@ -662,7 +711,11 @@ namespace CalligraphyTutor.ViewModel
                     //assing StrokeDeviation as 0
                         StrokeDeviation = 0;
                     //change the student hit state to true
+                    if (StrokeIsChecked)
+                    {
                         StudentHitState = true;
+                    }
+                        
                     //exit the wole loop
                         return refStylusPoint;
                     }
@@ -676,29 +729,11 @@ namespace CalligraphyTutor.ViewModel
                 }
             //if none of the points return a hit, change color and return the closest sp
             //ChangeStrokeColor(e, Colors.Red);
-            StudentHitState = false;
-            return refStylusPoint;
-        }
-
-        /// <summary>
-        /// Variable that prevents assignment of colors when there is no change of stroke hit state
-        /// </summary>
-        private Color _previousColor = Colors.Green;
-        /// <summary>
-        /// Method for changing color
-        /// </summary>
-        /// <param name="e"></param>
-        /// <param name="color"></param>
-        public void ChangeStrokeColor(StylusEventArgs e, Color color)
-        {
-            string directory = Environment.CurrentDirectory;
-            System.Media.SoundPlayer player = new System.Media.SoundPlayer(directory + @"\Sounds\Error.wav");
-            if (color == _previousColor)
+            if (StrokeIsChecked)
             {
-                return;
+                StudentHitState = false;
             }
-            //((StudentInkCanvas)e.Source).StrokeColor = color;
-            _previousColor = color;
+            return refStylusPoint;
         }
 
         /// <summary>

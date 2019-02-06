@@ -15,6 +15,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Runtime.InteropServices;
+using CalligraphyTutor.StylusPlugins;
 
 namespace CalligraphyTutor.ViewModel
 {
@@ -68,6 +69,9 @@ namespace CalligraphyTutor.ViewModel
         }
 
         private bool isChecked = false;
+        /// <summary>
+        /// enables evaluation mode where no feedback is provided at all.
+        /// </summary>
         public bool IsChecked
         {
             get { return isChecked; }
@@ -78,6 +82,11 @@ namespace CalligraphyTutor.ViewModel
                 RaisePropertyChanged();
             }
         }
+
+        private float PenPressure = 0f;
+        private float Tilt_X = 0f;
+        private float Tilt_Y = 0f;
+        private double StrokeVelocity = 0d;
 
         private StrokeCollection _expertStrokes = new StrokeCollection();
         public StrokeCollection ExpertStrokes
@@ -104,6 +113,22 @@ namespace CalligraphyTutor.ViewModel
         public ExpertViewModel()
         {
             globals = Globals.Instance;
+            LogStylusDataPlugin.StylusMoveProcessEnded += LogStylusDataPlugin_StylusMoveProcessEnded;   
+        }
+
+        private void LogStylusDataPlugin_StylusMoveProcessEnded(object sender, StylusMoveProcessEndedEventArgs e)
+        {
+            //send data to learning hub if the student is recording
+            if (this.ExpertIsRecording == true)
+            {
+                    //assign the values
+                    PenPressure = e.Pressure;
+                    Tilt_X = e.XTilt;
+                    Tilt_Y = e.YTilt;
+                    StrokeVelocity = e.StrokeVelocity;
+                    SendDataAsync();
+
+            }
         }
 
         private void MyConnectorHub_stopRecordingEvent(object sender)
@@ -141,10 +166,11 @@ namespace CalligraphyTutor.ViewModel
         private void SetValueNames()
         {
             List<string> names = new List<string>();
+            names.Add("StrokeVelocity");
             names.Add("PenPressure");
             names.Add("Tilt_X");
             names.Add("Tilt_Y");
-            names.Add("StrokeVelocity");
+
             myConnectorHub.SetValuesName(names);
 
         }
@@ -154,35 +180,31 @@ namespace CalligraphyTutor.ViewModel
         /// </summary>
         /// <param name="args"></param>
         /// <param name="expertPoint"></param>
-        public async void SendDataAsync(StylusEventArgs args)
+        public async void SendDataAsync()
         {
-            await Task.Run(() => { SendData(args); });
+            await Task.Run(() => { SendData(); });
         }
         /// <summary>
         /// Method for sending data
         /// </summary>
         /// <param name="args"></param>
         /// <param name="expertPoint"></param>
-        private void SendData(StylusEventArgs args)
+        private void SendData()
         {
-            List<string> values = new List<string>();
-            Application.Current.Dispatcher.Invoke(new Action(() =>
+            try
             {
-                String PenPressure = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.NormalPressure).ToString();
-                values.Add(PenPressure);
-                String Tilt_X = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.XTiltOrientation).ToString();
-                values.Add(Tilt_X);
-                String Tilt_Y = args.GetStylusPoints((InkCanvas)args.Source).Last().GetPropertyValue(StylusPointProperties.YTiltOrientation).ToString();
-                values.Add(Tilt_Y);
-                double StrokeVelocity = CalculateStrokeVelocity(args);
-                if(Double.IsNaN(StrokeVelocity) || Double.IsInfinity(StrokeVelocity))
-                {
-                    StrokeVelocity = 0;
-                }
+                List<string> values = new List<string>();
                 values.Add(StrokeVelocity.ToString());
-            }));
-            myConnectorHub.StoreFrame(values);
-            //globals.Speech.SpeakAsync("Student Data sent");
+                values.Add(PenPressure.ToString());
+                values.Add(Tilt_X.ToString());
+                values.Add(Tilt_Y.ToString());
+                myConnectorHub.StoreFrame(values);
+            }
+            catch(Exception e)
+            {
+                Debug.WriteLine(e.StackTrace);
+            }
+
         }
 
         #endregion
@@ -288,19 +310,6 @@ namespace CalligraphyTutor.ViewModel
                 return _stylusDown;
             }
         }
-        private ICommand _stylusMoved;
-        public ICommand ExpertCanvas_OnStylusMoved
-        {
-            get
-            {
-                _stylusMoved = new RelayCommand(
-                    param => OnStylusMoved(param),
-                    null
-                    );
-
-                return _stylusMoved;
-            }
-        }
         private ICommand _stylusInRange;
         public ICommand ExpertCanvas_StylusInRange
         {
@@ -312,25 +321,6 @@ namespace CalligraphyTutor.ViewModel
                     );
 
                 return _stylusInRange;
-            }
-        }
-
-        private void OnStylusMoved(object Param)
-        {
-
-            //send data to learning hub if recording button is clicked
-            if (ExpertIsRecording == true)
-            {
-                try
-                {
-                    StylusEventArgs args = (StylusEventArgs)Param;
-                    //SendDataAsync(args);
-
-                }
-                catch (Exception ex)
-                {
-                      Debug.WriteLine(ex.StackTrace);
-                }
             }
         }
 
@@ -354,50 +344,6 @@ namespace CalligraphyTutor.ViewModel
             {
                 ((ExpertInkCanvas)args.Source).DisplayAnimation = true;
             }
-
-        }
-
-        /// <summary>
-        /// Method to calculate distance 
-        /// </summary>
-        /// <param name="startingPoint"></param>
-        /// <param name="finalPoint"></param>
-        /// <returns></returns>
-        public double CalcualteDistance(Point startingPoint, Point finalPoint)
-        {
-            double distance = Math.Sqrt(Math.Pow(Math.Abs(startingPoint.X - finalPoint.X), 2)
-                    + Math.Pow(Math.Abs(startingPoint.Y - finalPoint.Y), 2));
-
-            //divide the distance with PPI for the surface laptop to convert to inches and then multiply to change into mm
-            double distancePPI = (distance / 200) * 25.4;
-            return distancePPI;
-        }
-
-        private Point initVelocityPoint;
-        private DateTime initVelocityTime;
-        private Point finalVelocityPoint;
-        /// <summary>
-        /// calculates the velocity of the stroke in seconds
-        /// </summary>
-        public double CalculateStrokeVelocity(StylusEventArgs e)
-        {
-            Application.Current.Dispatcher.Invoke(new Action(() =>
-            {
-                //if it is the first time running assign the inital point and retrun
-                if (initVelocityPoint == null || initVelocityTime == null)
-                {
-                    initVelocityPoint = e.StylusDevice.GetStylusPoints((ExpertInkCanvas)e.Source).Last().ToPoint();
-                    initVelocityTime = DateTime.Now;
-                    return;
-                }
-                //else assign the last point and 
-                finalVelocityPoint = e.StylusDevice.GetStylusPoints((ExpertInkCanvas)e.Source).Last().ToPoint();
-            }));
-
-            double velocity = CalcualteDistance(initVelocityPoint, finalVelocityPoint) / (DateTime.Now - initVelocityTime).Milliseconds;
-            initVelocityPoint = finalVelocityPoint;
-            initVelocityTime = DateTime.Now;
-            return velocity;
 
         }
         #endregion
