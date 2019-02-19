@@ -12,10 +12,10 @@
 
     <Grid Background="#7ec0ee">
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.3*"/>
+            <RowDefinition Height="0.4*"/>
             <RowDefinition Height="1.4*"/>
-            <RowDefinition Height="0.15*"/>
-            <RowDefinition Height="0.15*"/>
+            <RowDefinition Height="0.1*"/>
+            <RowDefinition Height="0.1*"/>
         </Grid.RowDefinitions>
 
         <DockPanel HorizontalAlignment="Center" Grid.Row="0" Margin="5,5,5,5" >
@@ -42,22 +42,7 @@
             </Button>
         </DockPanel>
 
-        <Grid Grid.Row="1" VerticalAlignment="Top">
-            <Model:ExpertInkCanvas Height="300" Strokes="{Binding Path=ExpertStrokes}" >
-                <i:Interaction.Triggers>
-
-                    <i:EventTrigger EventName="StylusInRange">
-                        <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_StylusInRange}"
-                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
-                    </i:EventTrigger>
-                    <i:EventTrigger EventName="StylusDown">
-                        <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_OnStylusDown}"
-                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
-                    </i:EventTrigger>
-
-                </i:Interaction.Triggers>
-            </Model:ExpertInkCanvas>
-
+        <Grid Grid.Row="1" VerticalAlignment="Top" Background="White">
 
             <Line Stroke="Black" Grid.Row="1" Height="2" Margin="0,-200,0,0" StrokeThickness="4"
               X1="0" X2="{Binding ScreenWidth}" >
@@ -74,6 +59,21 @@
             <Line Stroke="Black" Grid.Row="1" Height="2"  Margin="0,200,0,0"  StrokeThickness="4"
               X1="0" X2="{Binding ScreenWidth}" >
             </Line>
+
+            <Model:ExpertInkCanvas Height="300" Strokes="{Binding Path=ExpertStrokes}"  Background="Transparent">
+                <i:Interaction.Triggers>
+
+                    <i:EventTrigger EventName="StylusInRange">
+                        <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_StylusInRange}"
+                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
+                    </i:EventTrigger>
+                    <i:EventTrigger EventName="StylusDown">
+                        <Model:InvokeDelegateCommandAction Command="{Binding Path=ExpertCanvas_OnStylusDown}"
+                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
+                    </i:EventTrigger>
+
+                </i:Interaction.Triggers>
+            </Model:ExpertInkCanvas>
         </Grid>
 
         <Grid Grid.Row="2" HorizontalAlignment="Center">

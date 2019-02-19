@@ -31,7 +31,7 @@ namespace CalligraphyTutor.Model
         //    }
         //}
 
-        private System.Windows.Media.Color _strokeColor = Colors.Purple;
+        private System.Windows.Media.Color _strokeColor = Colors.Gray;
         public Color StrokeColor
         {
             get { return _strokeColor; }

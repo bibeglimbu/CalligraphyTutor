@@ -68,7 +68,7 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        private bool isChecked = false;
+        private bool isChecked = true;
         /// <summary>
         /// enables evaluation mode where no feedback is provided at all.
         /// </summary>

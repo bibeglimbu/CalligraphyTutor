@@ -23,7 +23,7 @@ namespace CalligraphyTutor.StylusPlugins
 
     class LogStylusDataPlugin : StylusPlugIn
     {
-        
+        #region eventsDefintion
         public static event EventHandler<StylusMoveProcessEndedEventArgs> StylusMoveProcessEnded;
         protected virtual void OnStylusMoveProcessEnded(StylusMoveProcessEndedEventArgs e)
         {
@@ -33,6 +33,8 @@ namespace CalligraphyTutor.StylusPlugins
                 handler(this, e);
             }
         }
+        #endregion
+
 
         /// <summary>
         /// starting point of the whole stroke

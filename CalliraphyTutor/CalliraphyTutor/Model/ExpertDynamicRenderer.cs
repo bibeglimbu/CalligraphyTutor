@@ -13,7 +13,7 @@ namespace CalligraphyTutor.Model
     class ExpertDynamicRenderer: DynamicRenderer
     {
         #region Vars & properties
-        private Color _c = Colors.Purple;
+        private Color _c = Colors.Gray;
         public Color StrokeColor
         {
             get { return _c; }

@@ -21,7 +21,7 @@ namespace CalligraphyTutor.Model
         #region vars
 
         Globals globals;
-        private Color _color = Colors.Red;
+        private Color _color = Colors.Green;
         public Color StrokeColor
         {
             get { return _color; }

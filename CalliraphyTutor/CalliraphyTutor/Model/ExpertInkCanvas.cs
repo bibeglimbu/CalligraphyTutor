@@ -39,14 +39,43 @@ namespace CalligraphyTutor.Model
             }
         }
 
+        private bool _isStylusDown = false;
+        public bool IsStylusDown
+        {
+            get { return _isStylusDown; }
+            set
+            {
+                _isStylusDown = value;
+
+            }
+        }
         //public static DependencyProperty DisplayAnimationProperty = DependencyProperty.RegisterAttached(
         //    "DisplayAnimation", typeof(bool), typeof(ExpertInkCanvas), new PropertyMetadata());
-  
+
         Guid expertTimestamp = new Guid("12345678-9012-3456-7890-123456789013");
         List<DateTime> StrokeTime = new List<DateTime>();
 
         LogStylusDataPlugin logStylusData = new LogStylusDataPlugin();
 
+        #endregion
+        #region Events definition
+        /// <summary>
+        /// Event raised when the pen is lifed or put down. declared it as static as the listening class would only listen to the object.
+        /// thid event is subscribed by the expert inkcanvas and stops the animation
+        /// </summary>
+        public static event EventHandler<ExpertStrokeLoadedEventEventArgs> ExpertStrokeLoadedEvent;
+        protected virtual void OnExpertStrokeLoaded(ExpertStrokeLoadedEventEventArgs e)
+        {
+            EventHandler<ExpertStrokeLoadedEventEventArgs> handler = ExpertStrokeLoadedEvent;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+        public class ExpertStrokeLoadedEventEventArgs : EventArgs
+        {
+            public StrokeCollection strokes { get; set; }
+        }
         #endregion
 
         public ExpertInkCanvas()
@@ -55,17 +84,22 @@ namespace CalligraphyTutor.Model
             this.DynamicRenderer = expertDynamicRenderer;
             _dispatchTimer.Interval = new TimeSpan(10000);
             _dispatchTimer.Tick += _dispatchTimer_Tick;
+            this.DefaultDrawingAttributes.IsHighlighter = true;
+            this.DefaultDrawingAttributes.Color = Colors.Gray;
+            this.DefaultDrawingAttributes.FitToCurve = false;
+            this.DefaultDrawingAttributes.StylusTip = StylusTip.Ellipse;
             StudentInkCanvas.PenDownUpEvent += StudentInkCanvas_PenDownUpEvent;
             this.StylusPlugIns.Add(logStylusData);
 
         }
 
+        private void StudentInkCanvas_PenDownUpEvent(object sender, StudentInkCanvas.PenDownUpEventEventArgs e)
+        {
+            IsStylusDown = e.state;
+        }
+
 
         #region EventHandlers
-        private void StudentInkCanvas_PenDownUpEvent(object sender, EventArgs e)
-        {
-            ToggleDispatchTimer();
-        }
 
         private void _dispatchTimer_Tick(object sender, EventArgs e)
         {
@@ -75,7 +109,7 @@ namespace CalligraphyTutor.Model
             }
 
             //if strokes is not empty and the user is not currently writing
-            if (this.Strokes.Count > 0 && Globals.Instance.IsStylusDown == false)
+            if (this.Strokes.Count > 0 && IsStylusDown == false)
             {
                 StrokeCollection s = Strokes;
                 //play the animation
@@ -89,12 +123,27 @@ namespace CalligraphyTutor.Model
 
         protected override void OnStrokesReplaced(InkCanvasStrokesReplacedEventArgs e)
         {
-            _dispatchTimer.Start();
+            if (DisplayAnimation)
+            {
+                _dispatchTimer.Start();
+            }
+            
             //if the stroke doesnt have stylus points
             if (e.NewStrokes.Count == 0)
             {
                 return;
             }
+            //if stroke is loaded from the file change its color to gray
+            StrokeCollection sc = new StrokeCollection();
+            foreach (Stroke s in e.NewStrokes)
+            {
+                s.DrawingAttributes.Color = Colors.Gray;
+                sc.Add(s);
+            }
+            ExpertStrokeLoadedEventEventArgs args = new ExpertStrokeLoadedEventEventArgs();
+            args.strokes = sc;
+            OnExpertStrokeLoaded(args);
+            
             // start the animation
             base.OnStrokesReplaced(e);
         }//OnStrokesReplaced
@@ -108,6 +157,10 @@ namespace CalligraphyTutor.Model
 
         protected override void OnStrokeCollected(InkCanvasStrokeCollectedEventArgs e)
         {
+            if (DisplayAnimation)
+            {
+                _dispatchTimer.Start();
+            }
             this.Strokes.Remove(e.Stroke);
             if (e.Stroke.StylusPoints.Count > 2)
             {
@@ -121,10 +174,6 @@ namespace CalligraphyTutor.Model
             StrokeTime = new List<DateTime>();
         }
 
-        private void ToggleDispatchTimer()
-        {
-            Globals.Instance.IsStylusDown = !Globals.Instance.IsStylusDown;
-        }
         #endregion
 
         #region Native Methods
@@ -215,28 +264,28 @@ namespace CalligraphyTutor.Model
         /// cannot write a method currently that automatically stores all guid
         /// </summary>
         /// <param name="stroke"></param>
-        private ExpertStroke FilterExpertData(Stroke stroke)
-        {
-            //create a copy of stroke for iterating
-            ExpertStroke tempStroke = new ExpertStroke(stroke.StylusPoints);
-            for (int i = 0; i < tempStroke.StylusPoints.Count; i++)
-            {
-                Point pt = tempStroke.StylusPoints[i].ToPoint();
-                Vector v = Point.Subtract(prevPoint, pt);
+        //private ExpertStroke FilterExpertData(Stroke stroke)
+        //{
+        //    //create a copy of stroke for iterating
+        //    ExpertStroke tempStroke = new ExpertStroke(stroke.StylusPoints);
+        //    for (int i = 0; i < tempStroke.StylusPoints.Count; i++)
+        //    {
+        //        Point pt = tempStroke.StylusPoints[i].ToPoint();
+        //        Vector v = Point.Subtract(prevPoint, pt);
 
-                if(v.Length < 2)
-                {
-                    tempStroke.StylusPoints.RemoveAt(i);
-                    continue;
-                }
-                else
-                {
-                    prevPoint = pt;
-                }
+        //        if(v.Length < 2)
+        //        {
+        //            tempStroke.StylusPoints.RemoveAt(i);
+        //            continue;
+        //        }
+        //        else
+        //        {
+        //            prevPoint = pt;
+        //        }
 
-            }
-            return tempStroke;
-        }
+        //    }
+        //    return tempStroke;
+        //}
 
 
         #endregion

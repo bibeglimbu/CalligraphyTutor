@@ -11,16 +11,7 @@ namespace CalligraphyTutor.ViewModel
         private static readonly Lazy<Globals> lazy = new Lazy<Globals>(() => new Globals());
         public static Globals Instance { get { return lazy.Value; } }
 
-        private bool _isStylusDown = false;
-        public bool IsStylusDown
-        {
-            get { return _isStylusDown; }
-            set
-            {
-                _isStylusDown = value;
-                
-            }
-        }
+
 
         private double _strokeWidth = 5d;
         public double StrokeWidth

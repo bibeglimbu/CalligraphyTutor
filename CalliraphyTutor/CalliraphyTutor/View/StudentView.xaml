@@ -53,9 +53,8 @@
             
         </DockPanel>
 
-        <Grid Grid.Row="1" VerticalAlignment="Top">
-            <Model:ExpertInkCanvas Height="300" DisplayAnimation="True" Strokes="{Binding ExpertStrokes}" EditingMode="None">
-            </Model:ExpertInkCanvas>
+        <Grid Grid.Row="1" VerticalAlignment="Top" Background="White">
+
 
             <Line Stroke="Black" Grid.Row="1" Height="2" Margin="0,-200,0,0" StrokeThickness="4"
               X1="0" X2="{Binding ScreenWidth}" >
@@ -73,9 +72,13 @@
               X1="0" X2="{Binding ScreenWidth}" >
             </Line>
 
-            <Model:StudentInkCanvas Height="300" Strokes="{Binding StudentStrokes, Mode=TwoWay}" Background="Transparent" StrokeHitState="{Binding StudentHitState, Mode=TwoWay}"
+            <Model:ExpertInkCanvas Height="300" DisplayAnimation="True" Strokes="{Binding ExpertStrokes}" EditingMode="None" Background="Transparent">
+            </Model:ExpertInkCanvas>
+
+            <Model:StudentInkCanvas Height="300" Strokes="{Binding StudentStrokes, Mode=TwoWay}" Background="Transparent"
                 StrokeChecked="{Binding ElementName=StrokeCheckBox, Path=IsChecked, Mode=TwoWay}" 
-                PressureChecked = "{Binding ElementName=PressureCheckBox, Path=IsChecked, Mode=TwoWay}" >
+                PressureChecked = "{Binding ElementName=PressureCheckBox, Path=IsChecked, Mode=TwoWay}"
+                SpeedChecked = "{Binding ElementName=SpeedCheckBox, Path=IsChecked, Mode=TwoWay}" >
                 <i:Interaction.Triggers>
                     <i:EventTrigger EventName="StylusMove">
                         <Model:InvokeDelegateCommandAction Command="{Binding StudentInkCanvas_StylusMoved}"
@@ -97,7 +100,7 @@
         <Grid Grid.Row="2" HorizontalAlignment="Center">
             <DockPanel>
                 <CheckBox x:Name="PressureCheckBox" Grid.Column="0" IsChecked="{Binding PressureIsChecked, Mode=TwoWay}">Pressure</CheckBox>
-                <CheckBox Grid.Column="0" IsChecked="{Binding SpeedIsChecked, Mode=TwoWay}">Speed</CheckBox>
+                <CheckBox x:Name="SpeedCheckBox" Grid.Column="0" IsChecked="{Binding SpeedIsChecked, Mode=TwoWay}">Speed</CheckBox>
                 <CheckBox x:Name="StrokeCheckBox" Grid.Column="0" IsChecked="{Binding StrokeIsChecked, Mode=TwoWay}">Stroke</CheckBox>
             </DockPanel>
         </Grid>
