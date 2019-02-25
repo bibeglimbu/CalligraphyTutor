@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Speech.Synthesis;
 using System.Text;
@@ -632,7 +634,8 @@ namespace CalligraphyTutor.ViewModel
         /// returns the bin folder in the directory
         /// </summary>
         //string directory = Environment.CurrentDirectory;
-        string directory = AppDomain.CurrentDomain.BaseDirectory;
+        //string directory = AppDomain.CurrentDomain.BaseDirectory;
+        string directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         /// <summary>
         /// variable used to calculate if the sound should be played.
@@ -644,6 +647,7 @@ namespace CalligraphyTutor.ViewModel
         /// </summary>
         public async void playSound(CancellationToken ct)
         {
+
             System.Media.SoundPlayer player = new System.Media.SoundPlayer(directory + @"\sounds\Error.wav");
             if ((DateTime.Now - PlayDateTime).TotalSeconds > 1.5)
             {
