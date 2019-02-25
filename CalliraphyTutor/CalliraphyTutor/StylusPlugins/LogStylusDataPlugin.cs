@@ -35,7 +35,7 @@ namespace CalligraphyTutor.StylusPlugins
         }
         #endregion
 
-
+        #region OverRides
         /// <summary>
         /// starting point of the whole stroke
         /// </summary>
@@ -134,6 +134,9 @@ namespace CalligraphyTutor.StylusPlugins
             StrokeVelocity = 0;
         }
 
+        #endregion
+
+        #region Native Methods
         /// <summary>
         /// calculates the velocity of the stroke in Seconds. ensure that the distance between the 2 points is not 0 when calling this method.
         /// </summary>
@@ -159,7 +162,6 @@ namespace CalligraphyTutor.StylusPlugins
             return velocity;
         }
 
-
         /// <summary>
         /// Method to calculate distance by getting the center of the stroke using bounds and using the first point of the stroke.
         /// </summary>
@@ -184,7 +186,7 @@ namespace CalligraphyTutor.StylusPlugins
             initStrokeStartPoint = RectCenter;
             return distanceMM;
         }
-
+        #endregion
 
     }
 }

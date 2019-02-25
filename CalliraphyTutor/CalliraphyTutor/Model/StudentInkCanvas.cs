@@ -1,4 +1,5 @@
 ﻿using CalligraphyTutor.StylusPlugins;
+using CalligraphyTutor.ViewModel;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -29,7 +30,7 @@ namespace CalligraphyTutor.Model
         }
 
         /// <summary>
-        /// Property which determines the default color based on hittest state with expert stroke
+        /// Property which determines the default PreviousColor based on hittest state with expert stroke
         /// </summary>
         public bool StrokeChecked
         {
@@ -109,7 +110,6 @@ namespace CalligraphyTutor.Model
             set
             {
                 _isStylusDown = value;
-
             }
         }
 
@@ -117,11 +117,12 @@ namespace CalligraphyTutor.Model
         List<DateTime> StrokeTime = new List<DateTime>();
 
         LogStylusDataPlugin logStylusDataPlugin = new LogStylusDataPlugin();
+        HitStrokeTesterPlugin hitStrokeTesterPlugin = new HitStrokeTesterPlugin();
 
         private double studentVelocity = 0d;
         private double expertVelocity = -0.01d;
-        // Declare a System.Threading.CancellationTokenSource.
-        CancellationTokenSource cts;
+
+        private Dictionary<Stroke, Color> hitChangedPoints = new Dictionary<Stroke, Color>();
         #endregion
 
         /// <summary>
@@ -132,21 +133,14 @@ namespace CalligraphyTutor.Model
             //instantiate the customDynamicRenderer
             studentCustomRenderer = new StudentDynamicRenderer();
             this.DynamicRenderer = studentCustomRenderer;
-            StudentDynamicRenderer.ExpertVelocityCalculatedEvent += StudentCustomRenderer_ExpertVelocityCalculatedEvent;
+            StudentViewModel.ExpertVelocityCalculatedEvent += StudentViewModel_ExpertVelocityCalculatedEvent;
+            
+            this.StylusPlugIns.Add(hitStrokeTesterPlugin);
             this.StylusPlugIns.Add(logStylusDataPlugin);
             LogStylusDataPlugin.StylusMoveProcessEnded += LogStylusDataPlugin_StylusMoveProcessEnded;
+            HitStrokeTesterPlugin.HitChangePointsEvent += HitStrokeTesterPlugin_HitChangePointsEvent;
             this.DefaultDrawingAttributes.FitToCurve = false;
             this.DefaultDrawingAttributes.StylusTip = StylusTip.Ellipse;
-        }
-
-        private void LogStylusDataPlugin_StylusMoveProcessEnded(object sender, StylusMoveProcessEndedEventArgs e)
-        {
-            studentVelocity = e.StrokeVelocity;
-        }
-
-        private void StudentCustomRenderer_ExpertVelocityCalculatedEvent(object sender, StudentDynamicRenderer.ExpertVelocityCalculatedEventArgs e)
-        {
-            expertVelocity = e.velocity;
         }
 
         #region events definition
@@ -223,6 +217,23 @@ namespace CalligraphyTutor.Model
         #endregion
 
         #region eventHandlers
+        private void StudentViewModel_ExpertVelocityCalculatedEvent(object sender, StudentViewModel.ExpertVelocityCalculatedEventArgs e)
+        {
+            expertVelocity = e.velocity;
+        }
+        private void HitStrokeTesterPlugin_HitChangePointsEvent(object sender, HitStrokeTesterPlugin.HitChangePointsEventArgs e)
+        {
+            hitChangedPoints = e.hitChangedPoints;
+        }
+        private void LogStylusDataPlugin_StylusMoveProcessEnded(object sender, StylusMoveProcessEndedEventArgs e)
+        {
+            studentVelocity = e.StrokeVelocity;
+        }
+
+        #endregion
+
+        #region OverRides
+
         protected override void OnStylusDown(StylusDownEventArgs e)
         {
             //raise the pendown event for the expertinkcanvas to stop the animation
@@ -230,7 +241,6 @@ namespace CalligraphyTutor.Model
             PenDownUpEventEventArgs args = new PenDownUpEventEventArgs();
             args.state = IsStylusDown;
             OnPenDownUpEvent(args);
-            cts = new CancellationTokenSource();
             base.OnStylusDown(e);
 
         }
@@ -242,26 +252,13 @@ namespace CalligraphyTutor.Model
             PenDownUpEventEventArgs args = new PenDownUpEventEventArgs();
             args.state = IsStylusDown;
             OnPenDownUpEvent(args);
-            //cancel async task
-            if (cts != null)
-            {
-                cts.Cancel();
-            }
+
             base.OnStylusUp(e);
         }
 
         protected override void OnStylusMove(StylusEventArgs e)
         {
             StrokeTime.Add(DateTime.Now);
-            if (SpeedChecked == true && expertVelocity < 0)
-            {
-                if (studentVelocity > expertVelocity + 5)
-                {
-                    playSound(cts.Token);
-                }
-
-            }
-
             base.OnStylusMove(e);
         }
 
@@ -274,9 +271,10 @@ namespace CalligraphyTutor.Model
                 return;
             }
 
-            if (StrokeChecked)
+            //if stroke is checked and the hit points are not null
+            if (StrokeChecked == true && hitChangedPoints.Keys.Count !=0)
             {
-                //remove the stroke and instead create new stroke from _tempSPCollection at the end even though the color may not have changed
+                //remove the stroke and instead create new stroke from _tempSPCollection at the end even though the PreviousColor may not have changed
                 this.Strokes.Remove(e.Stroke);
                 //stylus point collection that holds all the points in the arguements
                 StylusPointCollection spc = new StylusPointCollection(e.Stroke.StylusPoints);
@@ -298,24 +296,24 @@ namespace CalligraphyTutor.Model
                         tempStrokeSPC.Add(spc[i]);
                     }
                     //if there is only one value in hitchangedpoints the it didnt hit any states
-                    if (studentCustomRenderer.hitChangedPoints.Keys.Count > 1)
+                    if (hitChangedPoints.Keys.Count > 1)
                     {
                         //iterate through each points in hitchangedpoints to check if the points intersect each other
-                        foreach (Stroke p in studentCustomRenderer.hitChangedPoints.Keys.ToList())
+                        foreach (Stroke p in hitChangedPoints.Keys.ToList())
                         {
-                            if (p == studentCustomRenderer.hitChangedPoints.Keys.Last())
+                            if (p == hitChangedPoints.Keys.Last())
                             {
                                 break;
                             }
                             if (p.HitTest(spc[i].ToPoint(), 2.5))
                             {
                                 //if the points intersect, create a stroke with the points in tempStrokeSPC
-                                StudentStroke customStroke = new StudentStroke(tempStrokeSPC, studentCustomRenderer.hitChangedPoints[p], PressureChecked);
+                                StudentStroke customStroke = new StudentStroke(tempStrokeSPC, hitChangedPoints[p], PressureChecked);
                                 //customStroke.AddPropertyData(studentTimestamp, StrokeTime.ToArray());
                                 //add the strokes in INKcanvas
                                 this.Strokes.Add(customStroke);
                                 //Remove the hit point from the dictionary
-                                studentCustomRenderer.hitChangedPoints.Remove(p);
+                                hitChangedPoints.Remove(p);
                                 //empty the tempStrokeSPC
                                 tempStrokeSPC = new StylusPointCollection();
                                 break;
@@ -325,7 +323,7 @@ namespace CalligraphyTutor.Model
                     if (i == spc.Count - 1 && tempStrokeSPC.Count!=0)
                     {
                         //if the points intersect, create a stroke with the points in tempStrokeSPC
-                        StudentStroke customStroke = new StudentStroke(tempStrokeSPC, studentCustomRenderer.hitChangedPoints.Values.Last(), PressureChecked);
+                        StudentStroke customStroke = new StudentStroke(tempStrokeSPC, hitChangedPoints.Values.Last(), PressureChecked);
                         //customStroke.AddPropertyData(studentTimestamp, StrokeTime.ToArray());
                         //add the strokes in INKcanvas
                         this.Strokes.Add(customStroke);
@@ -353,36 +351,7 @@ namespace CalligraphyTutor.Model
 
             Debug.WriteLine("Strokes Count: " + this.Strokes.Count);
             //StrokeTime = new List<DateTime>();
-            studentCustomRenderer.hitChangedPoints = new Dictionary<Stroke, Color>();
-
-        }
-
-        #endregion
-
-        #region  Play Sound
-        /// <summary>
-        /// returns the bin folder in the directory
-        /// </summary>
-        string directory = Environment.CurrentDirectory;
-
-        /// <summary>
-        /// variable used to calculate if the sound should be played.
-        /// </summary>
-        DateTime PlayDateTime = DateTime.Now;
-
-        /// <summary>
-        /// play the audio asynchronously. the cancellation token cancells the lined up async task for this method
-        /// </summary>
-        public async void playSound(CancellationToken ct)
-        {
-            System.Media.SoundPlayer player = new System.Media.SoundPlayer(directory + @"\sounds\Error.wav");
-            if ((DateTime.Now - PlayDateTime).TotalSeconds > 1.5)
-            {
-                PlayDateTime = DateTime.Now;
-                await Task.Run(() => player.Play());
-                Debug.WriteLine(PlayDateTime);
-
-            }
+            hitChangedPoints = new Dictionary<Stroke, Color>();
 
         }
 

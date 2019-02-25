@@ -13,7 +13,7 @@ using System.Windows.Media;
 namespace CalligraphyTutor.Model
 {
     /// <summary>
-    /// Student stroke class which accepts the color as a attribute
+    /// Student stroke class which accepts the PreviousColor as a attribute
     /// 
     /// </summary>
     class StudentStroke: Stroke
@@ -64,7 +64,8 @@ namespace CalligraphyTutor.Model
             }
             if (PressureChecked==true)
             {
-                StrokeColor = Color.FromArgb(Convert.ToByte(255 * this.StylusPoints[this.StylusPoints.Count / 2].PressureFactor), StrokeColor.R, StrokeColor.G, StrokeColor.B);
+                //StrokeColor = Color.FromArgb(Convert.ToByte(255 * this.StylusPoints[this.StylusPoints.Count / 2].PressureFactor), StrokeColor.R, StrokeColor.G, StrokeColor.B);
+                StrokeColor = Color.FromArgb(Convert.ToByte(255), StrokeColor.R, StrokeColor.G, StrokeColor.B);
             }
             
             drawingAttributes.Color = StrokeColor;

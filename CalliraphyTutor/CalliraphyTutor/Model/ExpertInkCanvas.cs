@@ -49,6 +49,19 @@ namespace CalligraphyTutor.Model
 
             }
         }
+
+        private bool _expertStrokesLoaded = false;
+        /// <summary>
+        /// Indicates if the <see cref="ExpertStrokes"/> has been loaded or not.
+        /// </summary>
+        public bool ExpertStrokeLoaded
+        {
+            get { return _expertStrokesLoaded; }
+            set
+            {
+                _expertStrokesLoaded = value;
+            }
+        }
         //public static DependencyProperty DisplayAnimationProperty = DependencyProperty.RegisterAttached(
         //    "DisplayAnimation", typeof(bool), typeof(ExpertInkCanvas), new PropertyMetadata());
 
@@ -58,6 +71,7 @@ namespace CalligraphyTutor.Model
         LogStylusDataPlugin logStylusData = new LogStylusDataPlugin();
 
         #endregion
+
         #region Events definition
         /// <summary>
         /// Event raised when the pen is lifed or put down. declared it as static as the listening class would only listen to the object.
@@ -75,6 +89,7 @@ namespace CalligraphyTutor.Model
         public class ExpertStrokeLoadedEventEventArgs : EventArgs
         {
             public StrokeCollection strokes { get; set; }
+            public bool state { get; set; }
         }
         #endregion
 
@@ -120,6 +135,9 @@ namespace CalligraphyTutor.Model
                     }));
             }
         }
+        #endregion
+
+        #region OverRiders
 
         protected override void OnStrokesReplaced(InkCanvasStrokesReplacedEventArgs e)
         {
@@ -133,17 +151,19 @@ namespace CalligraphyTutor.Model
             {
                 return;
             }
-            //if stroke is loaded from the file change its color to gray
+            //if stroke is loaded from the file change its PreviousColor to gray
             StrokeCollection sc = new StrokeCollection();
             foreach (Stroke s in e.NewStrokes)
             {
                 s.DrawingAttributes.Color = Colors.Gray;
                 sc.Add(s);
             }
+            ExpertStrokeLoaded = true;
             ExpertStrokeLoadedEventEventArgs args = new ExpertStrokeLoadedEventEventArgs();
             args.strokes = sc;
+            args.state = ExpertStrokeLoaded;
             OnExpertStrokeLoaded(args);
-            
+
             // start the animation
             base.OnStrokesReplaced(e);
         }//OnStrokesReplaced
@@ -258,7 +278,7 @@ namespace CalligraphyTutor.Model
             
         }
 
-        Point prevPoint = new Point(double.NegativeInfinity, double.NegativeInfinity);
+        ///Point prevPoint = new Point(double.NegativeInfinity, double.NegativeInfinity);
         /// <summary>
         /// Method for removing excess styluspoints from a expert stroke. has to be performed befored saving the guid not after loading, in which case guid is lost
         /// cannot write a method currently that automatically stores all guid
@@ -271,7 +291,7 @@ namespace CalligraphyTutor.Model
         //    for (int i = 0; i < tempStroke.StylusPoints.Count; i++)
         //    {
         //        Point pt = tempStroke.StylusPoints[i].ToPoint();
-        //        Vector v = Point.Subtract(prevPoint, pt);
+        //        Vector v = Point.Subtract(prevPoint_hitPoints, pt);
 
         //        if(v.Length < 2)
         //        {
@@ -280,7 +300,7 @@ namespace CalligraphyTutor.Model
         //        }
         //        else
         //        {
-        //            prevPoint = pt;
+        //            prevPoint_hitPoints = pt;
         //        }
 
         //    }

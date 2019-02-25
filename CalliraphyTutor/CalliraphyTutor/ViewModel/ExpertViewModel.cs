@@ -56,7 +56,7 @@ namespace CalligraphyTutor.ViewModel
                     RaisePropertyChanged();
             }
         }
-        //color of the button
+        //PreviousColor of the button
         private Brush brush = new SolidColorBrush(Colors.White);
         public Brush RecordButtonColor
         {

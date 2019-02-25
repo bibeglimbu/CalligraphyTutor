@@ -63,7 +63,7 @@ namespace CalligraphyTutor.ViewModel
         
         private Brush _brushColor = new SolidColorBrush(Colors.White);
         /// <summary>
-        /// Color of the button for chaning the color based on the state
+        /// Color of the button for chaning the PreviousColor based on the state
         /// </summary>
         public Brush RecordButtonColor
         {
@@ -102,19 +102,6 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        private bool _expertStrokesLoaded = false;
-        /// <summary>
-        /// Indicates if the <see cref="ExpertStrokes"/> has been loaded or not.
-        /// </summary>
-        public bool ExpertStrokeLoaded
-        {
-            get { return _expertStrokesLoaded; }
-            set
-            {
-                _expertStrokesLoaded = value;
-            }
-        }
-
         //for turing the popon on and off
         private bool _stayOpen = false;
         /// <summary>
@@ -134,62 +121,39 @@ namespace CalligraphyTutor.ViewModel
         /// Indicates if the data is being sent to the Learning hub.
         /// </summary>
         private bool StudentIsRecording = false;
+        private bool ExpertStrokeLoaded = false;
 
-        private bool _hitState = false;
-        /// <summary>
-        /// true if the current point is hitting the expert point
-        /// </summary>
-        public bool StudentHitState
-        {
-            get { return _hitState; }
-            set
-            {
-                _hitState = value;
-                RaisePropertyChanged("StudentHitState");
-            }
-        }
-
-        bool _pressureChecked = true;
-        /// <summary>
-        /// Check if you want feedback on pressure
-        /// </summary>
-        public bool PressureIsChecked
-        {
-            get { return _pressureChecked; }
-            set
-            {
-                _pressureChecked = value;
-                RaisePropertyChanged("PressureIsChecked");
-            }
-        }
-
-        bool _speedChecked = true;
-        /// <summary>
-        /// Check if you want feedback on speed
-        /// </summary>
+        private bool speedIsChecked = true;
         public bool SpeedIsChecked
         {
-            get { return _speedChecked; }
+            get { return speedIsChecked; }
             set
             {
-                _speedChecked = value;
+                speedIsChecked = value;
                 RaisePropertyChanged("SpeedIsChecked");
             }
         }
-
-        bool _strokeChecked = true;
-        /// <summary>
-        /// Check if you want feedback on Stroke
-        /// </summary>
-        public bool StrokeIsChecked
+        private bool pressureIsChecked = true;
+        public bool PressureIsChecked
         {
-            get { return _strokeChecked; }
+            get { return pressureIsChecked; }
             set
             {
-                _strokeChecked = value;
+                pressureIsChecked = value;
+                RaisePropertyChanged("PressureIsChecked");
+            }
+        }
+        private bool strokeIsChecked = true;
+        public bool StrokeIsChecked
+        {
+            get { return strokeIsChecked; }
+            set
+            {
+                strokeIsChecked = value;
                 RaisePropertyChanged("StrokeIsChecked");
             }
         }
+
 
         //LogStylusDataPlugin logData;
         private float PenPressure = 0f;
@@ -200,7 +164,8 @@ namespace CalligraphyTutor.ViewModel
 
         Globals globals;
         ConnectorHub.ConnectorHub myConnectorHub;
-
+        // Declare a System.Threading.CancellationTokenSource.
+        CancellationTokenSource cts;
         #endregion
 
         /// <summary>
@@ -210,12 +175,41 @@ namespace CalligraphyTutor.ViewModel
         {
             globals = Globals.Instance;
             LogStylusDataPlugin.StylusMoveProcessEnded += LogData_StylusMoveProcessEnded;
-            StudentDynamicRenderer.StudentDeviationCalculatedEvent += StudentDynamicRenderer_StudentDeviationCalculatedEvent;
+            HitStrokeTesterPlugin.StudentDeviationCalculatedEvent += HitStrokeTesterPlugin_StudentDeviationCalculatedEvent;
             ResultsViewModel.ButtonClicked += ResultsViewModel_ButtonClicked;
-            //assign the variables to be rorded in the learning hub
+            ExpertInkCanvas.ExpertStrokeLoadedEvent += ExpertInkCanvas_ExpertStrokeLoadedEvent;
+            //StudentInkCanvas.SpeedCheckedEvent += StudentInkCanvas_SpeedCheckedEvent;
         }
 
-        private void StudentDynamicRenderer_StudentDeviationCalculatedEvent(object sender, StudentDynamicRenderer.StudentDeviationCalculatedEventArgs e)
+        #region EventDefinition
+        /// <summary>
+        /// event that updates when the velocity is calculated
+        /// </summary>
+        public static event EventHandler<ExpertVelocityCalculatedEventArgs> ExpertVelocityCalculatedEvent;
+        protected virtual void OnExpertVelocityCalculated(ExpertVelocityCalculatedEventArgs e)
+        {
+            EventHandler<ExpertVelocityCalculatedEventArgs> handler = ExpertVelocityCalculatedEvent;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+        public class ExpertVelocityCalculatedEventArgs : EventArgs
+        {
+            public double velocity { get; set; }
+        }
+        #endregion
+
+        #region EventHandlers
+        //private void StudentInkCanvas_SpeedCheckedEvent(object sender, StudentInkCanvas.SpeedCheckedEventArgs e)
+        //{
+        //    SpeedIsChecked = e.state;
+        //}
+        private void ExpertInkCanvas_ExpertStrokeLoadedEvent(object sender, ExpertInkCanvas.ExpertStrokeLoadedEventEventArgs e)
+        {
+            ExpertStrokeLoaded = e.state;
+        }
+        private void HitStrokeTesterPlugin_StudentDeviationCalculatedEvent(object sender, HitStrokeTesterPlugin.StudentDeviationCalculatedEventArgs e)
         {
             StrokeDeviation = e.deviation;
             if (this.StudentIsRecording == true)
@@ -230,12 +224,6 @@ namespace CalligraphyTutor.ViewModel
                 }
             }
         }
-
-        /// <summary>
-        /// Event handlerfor handling onstylusmoveprocessedended events
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void LogData_StylusMoveProcessEnded(object sender, StylusMoveProcessEndedEventArgs e)
         {
             //assign the values
@@ -256,34 +244,20 @@ namespace CalligraphyTutor.ViewModel
                 }
             }
         }
-
         private void MyConnectorHub_stopRecordingEvent(object sender)
         {
             globals.Speech.SpeakAsync("stop recording");
             StartRecordingData();
         }
-
         private void MyConnectorHub_startRecordingEvent(object sender)
         {
             globals.Speech.SpeakAsync("start recording");
             StartRecordingData();
         }
-
-        #region EventHandlers
-        /// <summary>
-        /// Event handler which toggles the <see cref="StayOpen"/> on and off.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void ResultsViewModel_ButtonClicked(object sender, EventArgs e)
         {
             StayOpen = false;
         }
-        /// <summary>
-        /// Event handler for receiving feedback from the <see cref="LearningHubManager"/>
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="feedback"></param>
         private void MyFeedback_feedbackReceivedEvent(object sender, string feedback)
         {
             Debug.WriteLine("Feedback Received");
@@ -292,10 +266,12 @@ namespace CalligraphyTutor.ViewModel
             //    //ReadStream(feedback);
             //}
         }
+        #endregion
 
+        #region Icommand Overrides
         private ICommand _StylusDown;
         /// <summary>
-        /// Icommand method for binding to the event.
+        /// Icommand method for binding stylusdown handler to the event.
         /// </summary>
         public ICommand StudentInkCanvas_StylusDown
         {
@@ -311,13 +287,14 @@ namespace CalligraphyTutor.ViewModel
         }
         private void StudentView_OnStylusDown(Object param)
         {
+            cts = new CancellationTokenSource();
             Debug.WriteLine("PenDown");
             //StylusEventArgs args = (StylusEventArgs)param; 
         }
 
         private ICommand _StylusUp;
         /// <summary>
-        /// Icommand method for binding to the event.
+        /// Icommand method for binding stylus up handler to the event.
         /// </summary>
         public ICommand StudentInkCanvas_StylusUp
         {
@@ -333,6 +310,11 @@ namespace CalligraphyTutor.ViewModel
         }
         private void StudentView_OnStylusUp(Object param)
         {
+            //cancel async task
+            if (cts != null)
+            {
+                cts.Cancel();
+            }
             Debug.WriteLine("PenUp");
             //reset all value when the pen is lifted
             PenPressure = 0f;
@@ -345,7 +327,7 @@ namespace CalligraphyTutor.ViewModel
 
         private ICommand _StylusMoved;
         /// <summary>
-        /// Icommand method for binding to the event.
+        /// Icommand method for binding stylusMoved handler to the event.
         /// </summary>
         public ICommand StudentInkCanvas_StylusMoved
         {
@@ -367,6 +349,20 @@ namespace CalligraphyTutor.ViewModel
         {
             //cast the parameter as stylyus event args
             StylusEventArgs args = (StylusEventArgs)param;
+            if (((StudentInkCanvas)(args.Source)).SpeedChecked == true && ExpertStrokes.Count !=0)
+            {
+                //add a value to the expert average velocity to provide a area of error
+                Stroke ExpertStroke = SelectNearestExpertStroke(new Stroke(args.GetStylusPoints(((StudentInkCanvas)(args.Source)))),ExpertStrokes);
+                double ExpertVelocity = CalculateAverageExpertStrokeVelocity(ExpertStroke) + 5;
+                if (SpeedIsChecked == true && ExpertStrokeLoaded == true)
+                {
+                    if (StrokeVelocity > ExpertVelocity + 5)
+                    {
+                        playSound(cts.Token);
+                    }
+
+                }
+            }
         }
         #endregion
 
@@ -469,9 +465,8 @@ namespace CalligraphyTutor.ViewModel
                 return;
             }
             ExpertStrokes = tempStrokeCollection;
-            Debug.WriteLine("guids " + ExpertStrokes[ExpertStrokes.Count - 1].GetPropertyDataIds().Length);
-           
-            ExpertStrokeLoaded = true;
+            //Debug.WriteLine("guids " + ExpertStrokes[ExpertStrokes.Count - 1].GetPropertyDataIds().Length);
+
             //start the timer
             //_studentTimer.Start();
         }
@@ -536,6 +531,128 @@ namespace CalligraphyTutor.ViewModel
                 }));
             }
             //globals.Speech.SpeakAsync("Student is recording "+ this.StudentIsRecording);
+        }
+
+        #endregion
+
+
+        /// <summary>
+        /// calculates the velocity of the stroke in seconds for expert stroke since the expert stroke could not be used in collection
+        /// </summary>
+        public double CalculateAverageExpertStrokeVelocity(Stroke s)
+        {
+            GuidAttribute IMyInterfaceAttribute = (GuidAttribute)Attribute.GetCustomAttribute(typeof(ExpertInkCanvas), typeof(GuidAttribute));
+            //Debug.WriteLine("IMyInterface Attribute: " + IMyInterfaceAttribute.Value);
+            Guid expertTimestamp = new Guid(IMyInterfaceAttribute.Value);
+
+            //Debug.WriteLine("guids " + argsStroke.GetPropertyDataIds().Length);
+            double totalStrokeLenght = 0;
+            double velocity = 0;
+            for (int i = 0; i < s.StylusPoints.Count - 1; i++)
+            {
+                //add all the distance between each stylus points in the stroke
+                totalStrokeLenght += CalcualteDistance(s.StylusPoints[i].ToPoint(), s.StylusPoints[i + 1].ToPoint());
+            }
+
+            List<DateTime> timeStamps = new List<DateTime>();
+            if (s.ContainsPropertyData(expertTimestamp))
+            {
+                object data = s.GetPropertyData(expertTimestamp);
+                foreach (DateTime dt in (Array)data)
+                {
+                    timeStamps.Add(dt);
+                }
+
+                velocity = totalStrokeLenght / (timeStamps.Last() - timeStamps.First()).TotalSeconds;
+            }
+            return velocity;
+
+        }
+
+        /// <summary>
+        /// returns the nearest expert stroke
+        /// </summary>
+        /// <param name="argsStroke"></param>
+        /// <param name="expertSC"></param>
+        /// <returns></returns>
+        private Stroke SelectNearestExpertStroke(Stroke argsStroke, StrokeCollection expertSC)
+        {
+            //assign the first stroke to the temp stroke holder
+            Stroke stroke = expertSC[0];
+            //get the bouding rect of the args stroke
+            Rect rect = argsStroke.GetBounds();
+            //get the center point of the arg stroke for calculating the distance
+            Point centerPoint = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
+            //distance between the args stroke and the current expert stroke
+            double tempStrokeDistance = -0.1d;
+            //iterate through each stroke to find the nearest stroke
+            foreach (Stroke es in expertSC)
+            {
+                //bound each expert stroke with a rectangle, get the center position and calculate the distance between the 2 points
+                double distance = CalcualteDistance(centerPoint,
+                    new Point(es.GetBounds().Left + es.GetBounds().Width / 2, es.GetBounds().Top + es.GetBounds().Height / 2));
+                //if it is the first time running
+                if (tempStrokeDistance < 0)
+                {
+                    //assign the values and continue
+                    tempStrokeDistance = distance;
+                    stroke = es;
+                    continue;
+                }
+                //if it is not the first time running and the tempDistance is smaller than the tempStrokeDistance
+                if (distance < tempStrokeDistance)
+                {
+                    //assign the smallest distance and the stroke that gave that valie
+                    tempStrokeDistance = distance;
+                    stroke = es;
+                }
+            }
+            return stroke;
+        }
+
+        /// <summary>
+        /// Method to calculate distance 
+        /// </summary>
+        /// <param name="startingPoint"></param>
+        /// <param name="finalPoint"></param>
+        /// <returns></returns>
+        public double CalcualteDistance(Point startingPoint, Point finalPoint)
+        {
+            //double distance = Math.Sqrt(Math.Pow(Math.Abs(startingPoint.X - finalPoint.X), 2)
+            //        + Math.Pow(Math.Abs(startingPoint.Y - finalPoint.Y), 2));
+            double distance = Point.Subtract(startingPoint, finalPoint).Length;
+            //distanceinmm = distance*(conversion factor from inch to mm)/parts per inch (which is the dot pitch)
+            double distanceInMm = (distance / 267) * 25.4;
+            return distanceInMm;
+        }
+
+
+        #region  Play Sound
+        /// <summary>
+        /// returns the bin folder in the directory
+        /// </summary>
+        //string directory = Environment.CurrentDirectory;
+        string directory = AppDomain.CurrentDomain.BaseDirectory;
+
+        /// <summary>
+        /// variable used to calculate if the sound should be played.
+        /// </summary>
+        DateTime PlayDateTime = DateTime.Now;
+
+        /// <summary>
+        /// play the audio asynchronously. the cancellation token cancells the lined up async task for this method
+        /// </summary>
+        public async void playSound(CancellationToken ct)
+        {
+            System.Media.SoundPlayer player = new System.Media.SoundPlayer(directory + @"\sounds\Error.wav");
+            if ((DateTime.Now - PlayDateTime).TotalSeconds > 1.5)
+            {
+                PlayDateTime = DateTime.Now;
+                await Task.Run(() => player.Play());
+                Debug.WriteLine(PlayDateTime);
+
+            }
+
         }
 
         #endregion

@@ -71,6 +71,7 @@
     <Compile Include="Model\StudentDynamicRenderer.cs" />
     <Compile Include="Model\StudentInkCanvas.cs" />
     <Compile Include="Model\StudentStroke.cs" />
+    <Compile Include="StylusPlugins\HitStrokeTesterPlugin.cs" />
     <Compile Include="StylusPlugins\LogStylusDataPlugin.cs" />
     <Compile Include="ViewModel\ExpertViewModel.cs" />
     <Compile Include="ViewModel\Globals.cs" />
