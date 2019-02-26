@@ -13,6 +13,7 @@ using System.Windows.Media;
 
 namespace CalligraphyTutor.StylusPlugins
 {
+
     /// <summary>
     /// plugin that continiously checks for any hit of the pen with the expert stroke
     /// </summary>
@@ -41,23 +42,6 @@ namespace CalligraphyTutor.StylusPlugins
 
 
         #region eventsDefintion
-
-        /// <summary>
-        /// event that updates when the velocity is calculated
-        /// </summary>
-        public static event EventHandler<StudentDeviationCalculatedEventArgs> StudentDeviationCalculatedEvent;
-        protected virtual void OnStudentDeviationCalculated(StudentDeviationCalculatedEventArgs e)
-        {
-            EventHandler<StudentDeviationCalculatedEventArgs> handler = StudentDeviationCalculatedEvent;
-            if (handler != null)
-            {
-                handler(this, e);
-            }
-        }
-        public class StudentDeviationCalculatedEventArgs : EventArgs
-        {
-            public double deviation { get; set; }
-        }
         /// <summary>
         /// event that updates when the velocity is calculated
         /// </summary>
@@ -108,6 +92,23 @@ namespace CalligraphyTutor.StylusPlugins
             public Dictionary<Stroke, Color> hitChangedPoints { get; set; }
 
         }
+
+        public static event EventHandler<StylusMoveProcessEndedEventArgs> StylusMoveProcessEnded;
+        protected virtual void OnStylusMoveProcessEnded(StylusMoveProcessEndedEventArgs e)
+        {
+            EventHandler<StylusMoveProcessEndedEventArgs> handler = StylusMoveProcessEnded;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+
+        // EventArgs for the StrokeRendered event.
+        public class StylusMoveProcessEndedEventArgs : EventArgs
+        {
+            public float Pressure { get; set; }
+            public double Deviation { get; set; }
+        }
         #endregion
 
         #region eventHandlers
@@ -124,16 +125,18 @@ namespace CalligraphyTutor.StylusPlugins
                 ExpertStylusPointsCollection.Add(s.StylusPoints);
             }
             ExpertStrokeLoaded = e.state;
+            //foreach (StylusPoint sp in ExpertStylusPointsCollection)
+            //{
+            //    Debug.WriteLine("loaded: "+ sp.GetPropertyValue(StylusPointProperties.NormalPressure));
+            //}
         }
         #endregion
 
         #region overRides
-        private Point prevPoint_hitPoints;
-        private Point prevPoint_stylusPoints;
+        private Point prevPoint;
         protected override void OnStylusDown(RawStylusInput rawStylusInput)
         {
-            prevPoint_hitPoints = new Point(double.NegativeInfinity, double.NegativeInfinity);
-            prevPoint_stylusPoints = new Point(double.NegativeInfinity, double.NegativeInfinity);
+            prevPoint = new Point(double.NegativeInfinity, double.NegativeInfinity);
             base.OnStylusDown(rawStylusInput);
         }
         protected override void OnStylusMove(RawStylusInput rawStylusInput)
@@ -164,22 +167,19 @@ namespace CalligraphyTutor.StylusPlugins
                 //IsColliding value is set with in the method and current color is also set
                 if (ExpertStrokeLoaded)
                 {
-                    for (int i = 0; i < stylusPoints.Count; i++)
-                    {
-                        Point pt = (Point)stylusPoints[i];
-                        Vector v = Point.Subtract(prevPoint_stylusPoints, pt);
-                        if (v.Length > 4)
-                        {
+                    ExpertStylusPoint = SelectNearestExpertPoint(tempStroke, ExpertStylusPointsCollection);
 
-                            ExpertStylusPoint = SelectNearestExpertPoint(tempStroke, ExpertStylusPointsCollection);
-                            //raise the event that the nearest expert point is selected
-                            NearestExpertStylusPointCalculatedEventArgs args = new NearestExpertStylusPointCalculatedEventArgs();
-                            args.styluspoint = ExpertStylusPoint;
-                            OnNearestExpertStylusPointCalculated(args);
-                            prevPoint_stylusPoints = pt;
-                            break;
-                        }
-                    }
+                    //raise the event that the nearest expert point is selected
+                    NearestExpertStylusPointCalculatedEventArgs args = new NearestExpertStylusPointCalculatedEventArgs();
+                    args.styluspoint = ExpertStylusPoint;
+                    OnNearestExpertStylusPointCalculated(args);
+                    //raise stylusmoveprocess ended arguement
+                    StylusMoveProcessEndedEventArgs argsE = new StylusMoveProcessEndedEventArgs();
+                    argsE.Pressure = ExpertStylusPoint.GetPropertyValue(StylusPointProperties.NormalPressure);
+                    argsE.Deviation = StrokeDeviation;
+                    //argsE.XTilt = ExpertStylusPoint.GetPropertyValue(StylusPointProperties.XTiltOrientation);
+                    //argsE.YTilt = ExpertStylusPoint.GetPropertyValue(StylusPointProperties.YTiltOrientation);
+                    OnStylusMoveProcessEnded(argsE);
                 }
 
                 if(!StrokeIsChecked && ExpertStrokeLoaded)
@@ -196,35 +196,33 @@ namespace CalligraphyTutor.StylusPlugins
                     firstDraw = false;
                     return;
                 }
-                //if it the first time the pen is dropped donot store the value regardless if the hit test changes or not
                 if (firstDraw == false)
                 {
                     //is colliding was set while selecting the nearest point
                     if (PreviousIsColliding != IsColliding)
                     {
-                        //raise the hitstate changed event
-                        HitStateChangedEventArgs hitargs = new HitStateChangedEventArgs();
-                        hitargs.state = IsColliding;
-                        hitargs.color = CurrentColor;
-                        OnHitStateChanged(hitargs);
                         for (int i = 0; i < stylusPoints.Count; i++)
                         {
                             Point pt = (Point)stylusPoints[i];
-                            Vector v = Point.Subtract(prevPoint_hitPoints, pt);
+                            Vector v = Point.Subtract(prevPoint, pt);
                             if (v.Length > 4)
                             {
+                                //raise the hitstate changed event
+                                HitStateChangedEventArgs hitargs = new HitStateChangedEventArgs();
+                                hitargs.state = IsColliding;
+                                hitargs.color = CurrentColor;
+                                OnHitStateChanged(hitargs);
                                 if (!hitChangedPoints.Keys.Contains<Stroke>(tempStroke))
                                 {
                                     hitChangedPoints.Add(tempStroke, PreviousColor);
                                 }
-                                prevPoint_hitPoints = pt;
-                                break;
+
+                                //assign the current values to the previous states
+                                PreviousIsColliding = IsColliding;
+                                PreviousColor = CurrentColor;
                             }
                         }
 
-                        //assign the current values to the previous states
-                        PreviousIsColliding = IsColliding;
-                        PreviousColor = CurrentColor;
                     }
 
                 }
@@ -275,6 +273,7 @@ namespace CalligraphyTutor.StylusPlugins
             return distanceInMm;
         }
 
+        private StylusPoint prevStylusPoint = new StylusPoint();
         /// <summary>
         /// Method for returning the nearest styluspoint in the expert stroke from the point at which the pen is standing.
         /// </summary>
@@ -293,8 +292,14 @@ namespace CalligraphyTutor.StylusPlugins
             //get the center point of the arg stroke for calculating the distance
             Point centerPoint = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
             //iterate through all the stylus point of expertstroke
-            foreach (StylusPoint sp in expertStylusPointCollection)
+
+           foreach (StylusPoint sp in expertStylusPointCollection)
             {
+                //Debug.WriteLine("selecting: "+ sp.GetPropertyValue(StylusPointProperties.NormalPressure));
+                if (sp.GetPropertyValue(StylusPointProperties.NormalPressure) <= 100)
+                {
+                    continue;
+                }
                 //calculate the distance from the point to the pen
                 double distance = CalcualteDistance(centerPoint, sp.ToPoint());
                 //if it is the first time, assign value and continue
@@ -306,15 +311,17 @@ namespace CalligraphyTutor.StylusPlugins
                 //check if the current point in the expertstroke hits one of the argsStroke
                 if (RenderedStroke.HitTest(sp.ToPoint(), 2.5))
                 {
+                    //if the hit point is the same the previous point
+                    if (sp.Equals(prevStylusPoint))
+                    {
+                        continue;
+                    }
                     //return the stylus point
                     refStylusPoint = sp;
-                    //assing StrokeDeviation as 0
-                    StrokeDeviation = 0;
+                    //assing StrokeDeviation_Student as 0
+                    StrokeDeviation = distance;
                     //assign the color
                     CurrentColor = Colors.Green;
-                    StudentDeviationCalculatedEventArgs args = new StudentDeviationCalculatedEventArgs();
-                    args.deviation = StrokeDeviation;
-                    OnStudentDeviationCalculated(args);
                     IsColliding = true;
                     //exit the wole loop
                     return refStylusPoint;
@@ -324,9 +331,6 @@ namespace CalligraphyTutor.StylusPlugins
                 {
                     //assign the new shorter distance, and assign the new point as ref point
                     StrokeDeviation = distance;
-                    StudentDeviationCalculatedEventArgs args = new StudentDeviationCalculatedEventArgs();
-                    args.deviation = StrokeDeviation;
-                    OnStudentDeviationCalculated(args);
                     refStylusPoint = sp;
                 }
             }

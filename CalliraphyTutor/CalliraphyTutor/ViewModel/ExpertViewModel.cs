@@ -166,10 +166,10 @@ namespace CalligraphyTutor.ViewModel
         private void SetValueNames()
         {
             List<string> names = new List<string>();
-            names.Add("StrokeVelocity");
-            names.Add("PenPressure");
-            names.Add("Tilt_X");
-            names.Add("Tilt_Y");
+            names.Add("StrokeVelocity_Student");
+            names.Add("PenPressure_Student");
+            names.Add("Tilt_X_Student");
+            names.Add("Tilt_Y_Student");
 
             myConnectorHub.SetValuesName(names);
 

@@ -158,11 +158,17 @@ namespace CalligraphyTutor.ViewModel
 
 
         //LogStylusDataPlugin logData;
-        private float PenPressure = 0f;
-        private float Tilt_X = 0f;
-        private float Tilt_Y = 0f;
-        private double StrokeVelocity = 0d;
-        private double StrokeDeviation = 0d;
+        private float PenPressure_Student = 0f;
+        private float Tilt_X_Student = 0f;
+        private float Tilt_Y_Student = 0f;
+        private double StrokeVelocity_Student = 0d;
+        private double StrokeDeviation_Student = 0d;
+
+        //expert data
+        private float PenPressure_Expert = 0f;
+        //private float Tilt_X_Expert = 0f;
+        //private float Tilt_Y_Expert = 0f;
+        private double StrokeVelocity_Expert = 0d;
 
         Globals globals;
         ConnectorHub.ConnectorHub myConnectorHub;
@@ -177,7 +183,7 @@ namespace CalligraphyTutor.ViewModel
         {
             globals = Globals.Instance;
             LogStylusDataPlugin.StylusMoveProcessEnded += LogData_StylusMoveProcessEnded;
-            HitStrokeTesterPlugin.StudentDeviationCalculatedEvent += HitStrokeTesterPlugin_StudentDeviationCalculatedEvent;
+            HitStrokeTesterPlugin.StylusMoveProcessEnded += HitStrokeTesterPlugin_StylusMoveProcessEnded;
             ResultsViewModel.ButtonClicked += ResultsViewModel_ButtonClicked;
             ExpertInkCanvas.ExpertStrokeLoadedEvent += ExpertInkCanvas_ExpertStrokeLoadedEvent;
             //StudentInkCanvas.SpeedCheckedEvent += StudentInkCanvas_SpeedCheckedEvent;
@@ -211,9 +217,14 @@ namespace CalligraphyTutor.ViewModel
         {
             ExpertStrokeLoaded = e.state;
         }
-        private void HitStrokeTesterPlugin_StudentDeviationCalculatedEvent(object sender, HitStrokeTesterPlugin.StudentDeviationCalculatedEventArgs e)
+        private void LogData_StylusMoveProcessEnded(object sender, StylusMoveProcessEndedEventArgs e)
         {
-            StrokeDeviation = e.deviation;
+            //assign the values
+            PenPressure_Student = e.Pressure;
+            Tilt_X_Student = e.XTilt;
+            Tilt_Y_Student = e.YTilt;
+            StrokeVelocity_Student = e.StrokeVelocity;
+            //send data to learning hub if the student is recording
             if (this.StudentIsRecording == true)
             {
                 try
@@ -226,13 +237,13 @@ namespace CalligraphyTutor.ViewModel
                 }
             }
         }
-        private void LogData_StylusMoveProcessEnded(object sender, StylusMoveProcessEndedEventArgs e)
+        private void HitStrokeTesterPlugin_StylusMoveProcessEnded(object sender, HitStrokeTesterPlugin.StylusMoveProcessEndedEventArgs e)
         {
             //assign the values
-            PenPressure = e.Pressure;
-            Tilt_X = e.XTilt;
-            Tilt_Y = e.YTilt;
-            StrokeVelocity = e.StrokeVelocity;
+            PenPressure_Expert = e.Pressure * 4;
+            StrokeDeviation_Student = e.Deviation;
+            //Tilt_X_Expert = e.XTilt;
+            //Tilt_Y_Expert = e.YTilt;
             //send data to learning hub if the student is recording
             if (this.StudentIsRecording == true)
             {
@@ -319,11 +330,11 @@ namespace CalligraphyTutor.ViewModel
             }
             Debug.WriteLine("PenUp");
             //reset all value when the pen is lifted
-            PenPressure = 0f;
-            Tilt_X = 0f;
-            Tilt_Y = 0f;
-            StrokeVelocity = 0d;
-            StrokeDeviation = 0d;
+            PenPressure_Student = 0f;
+            Tilt_X_Student = 0f;
+            Tilt_Y_Student = 0f;
+            StrokeVelocity_Student = 0d;
+            StrokeDeviation_Student = 0d;
 
         }
 
@@ -355,10 +366,11 @@ namespace CalligraphyTutor.ViewModel
             {
                 //add a value to the expert average velocity to provide a area of error
                 Stroke ExpertStroke = SelectNearestExpertStroke(new Stroke(args.GetStylusPoints(((StudentInkCanvas)(args.Source)))),ExpertStrokes);
-                double ExpertVelocity = CalculateAverageExpertStrokeVelocity(ExpertStroke) + 5;
+                StrokeVelocity_Expert = CalculateAverageExpertStrokeVelocity(ExpertStroke);
+                double ExpertVelocity = StrokeVelocity_Expert + 5;
                 if (SpeedIsChecked == true && ExpertStrokeLoaded == true)
                 {
-                    if (StrokeVelocity > ExpertVelocity + 5)
+                    if (StrokeVelocity_Student > ExpertVelocity + 5)
                     {
                         playSound(cts.Token);
                     }
@@ -402,11 +414,13 @@ namespace CalligraphyTutor.ViewModel
         private void SetValueNames()
         {
             List<string> names = new List<string>();
-            names.Add("StrokeSpeed");
-            names.Add("PenPressure");
-            names.Add("Tilt_X");
-            names.Add("Tilt_Y");
-            names.Add("StrokeDeviation");
+            names.Add("StrokeVelocity_Student");
+            names.Add("PenPressure_Student");
+            names.Add("Tilt_X_Student");
+            names.Add("Tilt_Y_Student");
+            names.Add("StrokeDeviation_Student");
+            names.Add("PenPressure_Expert");
+            //names.Add("StrokeVelocity_Expert");
             myConnectorHub.SetValuesName(names);
         }
 
@@ -427,11 +441,13 @@ namespace CalligraphyTutor.ViewModel
         private void SendData()
         {
             List<string> values = new List<string>();
-            values.Add(StrokeVelocity.ToString());
-            values.Add(PenPressure.ToString());
-            values.Add(Tilt_X.ToString());
-            values.Add(Tilt_Y.ToString());
-            values.Add(StrokeDeviation.ToString());
+            values.Add(StrokeVelocity_Student.ToString());
+            values.Add(PenPressure_Student.ToString());
+            values.Add(Tilt_X_Student.ToString());
+            values.Add(Tilt_Y_Student.ToString());
+            values.Add(StrokeDeviation_Student.ToString());
+            values.Add(PenPressure_Expert.ToString());
+            //values.Add(StrokeVelocity_Expert.ToString());
             myConnectorHub.StoreFrame(values);
             //globals.Speech.SpeakAsync("Student Data sent");
         }
