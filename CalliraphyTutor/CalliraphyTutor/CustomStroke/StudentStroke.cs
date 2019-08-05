@@ -1,4 +1,5 @@
-﻿using CalligraphyTutor.ViewModel;
+﻿using CalligraphyTutor.Managers;
+using CalligraphyTutor.ViewModel;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,8 +11,8 @@ using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace CalligraphyTutor.Model
-{
+namespace CalligraphyTutor.CustomStroke
+{ 
     /// <summary>
     /// Student stroke class which accepts the PreviousColor as a attribute
     /// 
@@ -20,7 +21,7 @@ namespace CalligraphyTutor.Model
     {
         #region vars
 
-        Globals globals;
+        SpeechManager mySpeechManager;
         private Color _color = Colors.Green;
         public Color StrokeColor
         {
@@ -37,7 +38,7 @@ namespace CalligraphyTutor.Model
 
         public StudentStroke(StylusPointCollection stylusPoints, bool PressureChecked) : base(stylusPoints)
         {
-            globals = Globals.Instance;
+            mySpeechManager = SpeechManager.Instance;
             this.PressureChecked = PressureChecked;
         }
 
@@ -45,7 +46,7 @@ namespace CalligraphyTutor.Model
         {
             StrokeColor = c;
             this.PressureChecked = PressureChecked;
-            globals = Globals.Instance;
+            mySpeechManager = SpeechManager.Instance;
 
         }
 
@@ -69,8 +70,6 @@ namespace CalligraphyTutor.Model
             }
             
             drawingAttributes.Color = StrokeColor;
-            drawingAttributes.Width = globals.StrokeWidth;
-            drawingAttributes.Height = globals.StrokeHeight;
             base.DrawCore(drawingContext, DrawingAttributes);
 
         }

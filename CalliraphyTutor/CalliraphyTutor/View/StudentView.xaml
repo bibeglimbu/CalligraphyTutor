@@ -4,114 +4,89 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:CalligraphyTutor.View"
-             xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
-             xmlns:Model="clr-namespace:CalligraphyTutor.Model"
+             xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
+             xmlns:cic="clr-namespace:CalligraphyTutor.CustomInkCanvas"
+             xmlns:mvvm="clr-namespace:GalaSoft.MvvmLight.Command;assembly=GalaSoft.MvvmLight.Platform"
              mc:Ignorable="d" 
              DataContext="{StaticResource StudentViewModel}">
     <Grid Background="#7ec0ee" Name="MainGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="0.4*"/>
-            <RowDefinition Height="1.4*"/>
-            <RowDefinition Height="0.1*"/>
-            <RowDefinition Height="0.1*"/>
+            <RowDefinition Height="2.0*"/>
+            <RowDefinition Height="0.2*"/>
+            <RowDefinition Height="0.2*"/>
+            <RowDefinition Height="0.2*"/>
         </Grid.RowDefinitions>
-        <DockPanel Grid.Row="0" HorizontalAlignment="Center">
-            <Button  Content="{Binding RecordButtonName}" Background="{Binding RecordButtonColor}"
-                 Command="{Binding RecordButton_clicked}"    
-                Width="300" Height="40" Margin="5,5,5,5">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Background" Value="White"/>
-                        <Setter Property="FontFamily" Value="/Resources/#BLACKCHANCERY"/>
-                        <Setter Property="FontSize" Value="28"/>
-                    </Style>
-                </Button.Style>
-            </Button>
+        <DockPanel HorizontalAlignment="Center" Grid.Row="0" Margin="5,5,5,5" >
+            <Button Content="ClearStrokes" Command="{Binding ClearButtonCommand}" Style="{StaticResource ButtonStyling}"/>
 
+            <Button Content="{Binding Path=RecordButtonName}" Command="{Binding RecordButtonCommand}" Background="{Binding RecordButtonColor}"
+                    Style="{StaticResource ButtonStyling}" />
 
-            <Button Content="Clear Strokes" Command="{Binding ClearButton_clicked}"
-                        Width="300" Height="40" Margin="5,5,5,5">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Background" Value="White"/>
-                        <Setter Property="FontFamily" Value="/Resources/#BLACKCHANCERY"/>
-                        <Setter Property="FontSize" Value="28"/>
-                    </Style>
-                </Button.Style>
-            </Button>
-
-            <Button Content="Load Strokes" Command="{Binding LoadButton_clicked}"
-                        Width="300" Height="40" Margin="5,5,5,5">
-                <Button.Style>
-                    <Style TargetType="Button">
-                        <Setter Property="Background" Value="White"/>
-                        <Setter Property="FontFamily" Value="/Resources/#BLACKCHANCERY"/>
-                        <Setter Property="FontSize" Value="28"/>
-                    </Style>
-                </Button.Style>
-            </Button>
-            
+            <Button Content="Load Data" Command="{Binding RecordButtonCommand}" IsEnabled="True"
+                    Style="{StaticResource ButtonStyling}" />
         </DockPanel>
 
         <Grid Grid.Row="1" VerticalAlignment="Top" Background="White">
 
 
-            <Line Stroke="Black" Grid.Row="1" Height="2" Margin="0,-200,0,0" StrokeThickness="4"
+            <Line Stroke="#A9A9A9" Grid.Row="1" Height="2" Margin="0,-300,0,0" StrokeThickness="4"
               X1="0" X2="{Binding ScreenWidth}" >
             </Line>
 
-            <Line Stroke="Black" Grid.Row="1" Height="2" StrokeThickness="2"  StrokeDashArray="2" Margin="0,-50,0,0"
+            <Line Stroke="#A9A9A9" Grid.Row="1" Height="2" StrokeThickness="2"  StrokeDashArray="2" Margin="0,-100,0,0"
               X1="0" X2="{Binding ScreenWidth}" >
             </Line>
 
-            <Line Stroke="Black" Grid.Row="1" Height="2" StrokeThickness="2"  StrokeDashArray="2" Margin="0,50,0,0"
+            <Line Stroke="#A9A9A9" Grid.Row="1" Height="2" StrokeThickness="2"  StrokeDashArray="2" Margin="0,100,0,0"
               X1="0" X2="{Binding ScreenWidth}" >
             </Line>
 
-            <Line Stroke="Black" Grid.Row="1" Height="2"  Margin="0,200,0,0"  StrokeThickness="4"
+            <Line Stroke="#A9A9A9" Grid.Row="1" Height="2"  Margin="0,300,0,0"  StrokeThickness="4"
               X1="0" X2="{Binding ScreenWidth}" >
             </Line>
 
-            <Model:ExpertInkCanvas Height="300" DisplayAnimation="True" Strokes="{Binding ExpertStrokes}" EditingMode="None" Background="Transparent">
-            </Model:ExpertInkCanvas>
+            <cic:ExpertInkCanvas Height="400" DisplayAnimation="True" Strokes="{Binding ExpertStrokes}" EditingMode="None"  Background="Transparent" >
+            </cic:ExpertInkCanvas>
 
-            <Model:StudentInkCanvas Height="300" Strokes="{Binding StudentStrokes, Mode=TwoWay}" Background="Transparent"
+            <cic:StudentInkCanvas Height="400" Strokes="{Binding StudentStrokes, Mode=TwoWay}" Background="Transparent"
                 StrokeChecked="{Binding ElementName=StrokeCheckBox, Path=IsChecked, Mode=TwoWay}" 
                 PressureChecked = "{Binding ElementName=PressureCheckBox, Path=IsChecked, Mode=TwoWay}"
                 SpeedChecked = "{Binding ElementName=SpeedCheckBox, Path=IsChecked, Mode=TwoWay}" >
                 <i:Interaction.Triggers>
-                    <i:EventTrigger EventName="StylusMove">
-                        <Model:InvokeDelegateCommandAction Command="{Binding StudentInkCanvas_StylusMoved}"
-                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
-                    </i:EventTrigger>
+
                     <i:EventTrigger EventName="StylusDown">
-                        <Model:InvokeDelegateCommandAction Command="{Binding StudentInkCanvas_StylusDown}"
-                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
+                        <mvvm:EventToCommand Command="{Binding StylusDownEventCommand}" PassEventArgsToCommand="True" x:Name="Fix"/>
                     </i:EventTrigger>
+
                     <i:EventTrigger EventName="StylusUp">
-                        <Model:InvokeDelegateCommandAction Command="{Binding StudentInkCanvas_StylusUp}"
-                                                           CommandParameter="{Binding RelativeSource={RelativeSource Self}, Path=InvokeParameter}"/>
+                        <mvvm:EventToCommand Command="{Binding StylusUpEventCommand}" PassEventArgsToCommand="True" />
                     </i:EventTrigger>
+
+                    <i:EventTrigger EventName="StylusMove">
+                        <mvvm:EventToCommand Command="{Binding StylusMovedEventCommand}" PassEventArgsToCommand="True" />
+                    </i:EventTrigger>
+
                 </i:Interaction.Triggers>
-            </Model:StudentInkCanvas>
+            </cic:StudentInkCanvas>
 
         </Grid>
 
-        <Grid Grid.Row="2" HorizontalAlignment="Center">
-            <DockPanel>
-                <CheckBox x:Name="PressureCheckBox" Grid.Column="0" IsChecked="{Binding PressureIsChecked, Mode=TwoWay}">Pressure</CheckBox>
-                <CheckBox x:Name="SpeedCheckBox" Grid.Column="0" IsChecked="{Binding SpeedIsChecked, Mode=TwoWay}">Speed</CheckBox>
-                <CheckBox x:Name="StrokeCheckBox" Grid.Column="0" IsChecked="{Binding StrokeIsChecked, Mode=TwoWay}">Stroke</CheckBox>
-            </DockPanel>
+        <Grid Grid.Row="2" Background="#7ec0ee">
+            <TextBlock Grid.Column="1"></TextBlock>
         </Grid>
 
         <Grid Grid.Row="3" HorizontalAlignment="Center">
-            <TextBlock>Load expert data to begin the session.</TextBlock>
+            <DockPanel>
+                <CheckBox x:Name="PressureCheckBox" Grid.Column="0" IsChecked="{Binding PressureIsChecked, Mode=TwoWay}" FontFamily="Arial" FontSize="12">Pressure</CheckBox>
+                <CheckBox x:Name="SpeedCheckBox" Grid.Column="0" IsChecked="{Binding SpeedIsChecked, Mode=TwoWay}" FontFamily="Arial" FontSize="12">Speed</CheckBox>
+                <CheckBox x:Name="StrokeCheckBox" Grid.Column="0" IsChecked="{Binding StrokeIsChecked, Mode=TwoWay}" FontFamily="Arial" FontSize="12">Stroke</CheckBox>
+            </DockPanel>
         </Grid>
 
+        <Grid Grid.Row="4" HorizontalAlignment="Center">
+            <TextBlock FontFamily="Arial" FontSize="12">Load expert data to begin the session.</TextBlock>
+        </Grid>
 
-        <Popup IsOpen="{Binding StayOpen}" Placement="Center">
-            <local:Results/>
-        </Popup>
     </Grid>
 </UserControl>

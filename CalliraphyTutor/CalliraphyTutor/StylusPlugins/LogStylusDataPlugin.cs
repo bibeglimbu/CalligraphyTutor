@@ -1,6 +1,7 @@
 ﻿using CalligraphyTutor.Model;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -54,6 +55,7 @@ namespace CalligraphyTutor.StylusPlugins
             initStrokeStartPoint = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
             //store the initial time
             initStrokeStartTime = DateTime.Now;
+            Debug.WriteLine(rawStylusInput.StylusDeviceId);
         }
 
         protected override void OnStylusMove(RawStylusInput rawStylusInput)
@@ -91,14 +93,24 @@ namespace CalligraphyTutor.StylusPlugins
                 float[] xtilt = new float[strokePoints.Count];
                 for (int i = 0; i < strokePoints.Count; i++)
                 {
-                    xtilt[i] = strokePoints[i].GetPropertyValue(StylusPointProperties.XTiltOrientation);
+                    try
+                    {
+                        xtilt[i] = strokePoints[i].GetPropertyValue(StylusPointProperties.XTiltOrientation);
+                    }
+                    catch (Exception e) { }
+                    
                 }
                 float tempXtilt = (xtilt.Max() + xtilt.Min()) / 2;
                 //Ytilt
                 float[] ytilt = new float[strokePoints.Count];
                 for (int i = 0; i < strokePoints.Count; i++)
                 {
-                    ytilt[i] = strokePoints[i].GetPropertyValue(StylusPointProperties.YTiltOrientation);
+                    try
+                    {
+                        ytilt[i] = strokePoints[i].GetPropertyValue(StylusPointProperties.YTiltOrientation);
+                    }
+                    catch (Exception e) { }
+                    
                 }
                 float tempYtilt = (ytilt.Max() + ytilt.Min()) / 2;
 

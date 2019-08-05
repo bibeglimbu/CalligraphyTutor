@@ -1,5 +1,9 @@
-﻿using CalligraphyTutor.Model;
+﻿using CalligraphyTutor.CustomInkCanvas;
+using CalligraphyTutor.Managers;
+using CalligraphyTutor.Model;
 using CalligraphyTutor.StylusPlugins;
+using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.CommandWpf;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -22,7 +26,7 @@ using System.Windows.Threading;
 
 namespace CalligraphyTutor.ViewModel
 {
-    public class StudentViewModel: BindableBase
+    public class StudentViewModel: ViewModelBase
     {
         #region Vars & properties
 
@@ -35,17 +39,6 @@ namespace CalligraphyTutor.ViewModel
             {
                 _screenWidth = value;
                 RaisePropertyChanged("ScreenWidth");
-            }
-        }
-        private int _screenHeight = (int)SystemParameters.PrimaryScreenHeight;
-        public int ScreenHeight
-        {
-            get { return _screenHeight; }
-            set
-            {
-                _screenHeight = value;
-
-                RaisePropertyChanged("ScreenHeight");
             }
         }
         
@@ -104,27 +97,6 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        //for turing the popon on and off
-        private bool _stayOpen = false;
-        /// <summary>
-        /// Indicates if the <see cref="ResultsViewModel"/> is open or not.
-        /// </summary>
-        public bool StayOpen
-        {
-            get { return _stayOpen; }
-            set
-            {
-                _stayOpen = value;
-                RaisePropertyChanged("StayOpen");
-            }
-        }
-
-        /// <summary>
-        /// Indicates if the data is being sent to the Learning hub.
-        /// </summary>
-        private bool StudentIsRecording = false;
-        private bool ExpertStrokeLoaded = false;
-
         private bool speedIsChecked = true;
         public bool SpeedIsChecked
         {
@@ -156,7 +128,52 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
+        private bool _isStylusDown = false;
+        public bool IsStylusDown
+        {
+            get { return _isStylusDown; }
+            set
+            {
+                _isStylusDown = value;
+                RaisePropertyChanged("IsStylusDown");
+            }
+        }
+        #endregion
 
+        #region Instantiations
+        /// <summary>
+        /// Indicates if the data is being sent to the Learning hub.
+        /// </summary>
+        private bool StudentIsRecording = false;
+        private bool ExpertStrokeLoaded = false;
+        /// <summary>
+        /// Audio based feedback
+        /// </summary>
+        SpeechManager mySpeechManager;
+        /// <summary>
+        /// Instantiation of the learning hub
+        /// </summary>
+        ConnectorHub.ConnectorHub myConnectorHub;
+        // Declare a System.Threading.CancellationTokenSource.
+        CancellationTokenSource cts;
+
+        //expert data value holders
+        private float PenPressure_Expert = 0f;
+        //private float Tilt_X_Expert = 0f;
+        //private float Tilt_Y_Expert = 0f;
+        private double StrokeVelocity_Expert = 0d;
+        #endregion
+
+        #region RelayCommand
+        public RelayCommand RecordButtonCommand { get; set; }
+        public RelayCommand ClearButtonCommand { get; set; }
+        public RelayCommand LoadButtonCommand { get; set; }
+        public RelayCommand<StylusEventArgs> StylusDownEventCommand { get; set; }
+        public RelayCommand<StylusEventArgs> StylusUpEventCommand { get; set; }
+        public RelayCommand<StylusEventArgs> StylusMoveEventCommand { get; set; }
+        #endregion
+
+        #region send data
         //LogStylusDataPlugin logData;
         private float PenPressure_Student = 0f;
         private float Tilt_X_Student = 0f;
@@ -164,16 +181,6 @@ namespace CalligraphyTutor.ViewModel
         private double StrokeVelocity_Student = 0d;
         private double StrokeDeviation_Student = 0d;
 
-        //expert data
-        private float PenPressure_Expert = 0f;
-        //private float Tilt_X_Expert = 0f;
-        //private float Tilt_Y_Expert = 0f;
-        private double StrokeVelocity_Expert = 0d;
-
-        Globals globals;
-        ConnectorHub.ConnectorHub myConnectorHub;
-        // Declare a System.Threading.CancellationTokenSource.
-        CancellationTokenSource cts;
         #endregion
 
         /// <summary>
@@ -181,12 +188,17 @@ namespace CalligraphyTutor.ViewModel
         /// </summary>
         public StudentViewModel()
         {
-            globals = Globals.Instance;
-            LogStylusDataPlugin.StylusMoveProcessEnded += LogData_StylusMoveProcessEnded;
+            RecordButtonCommand = new RelayCommand(StartRecordingData);
+            ClearButtonCommand = new RelayCommand(ClearStrokes);
+            LoadButtonCommand = new RelayCommand(LoadStrokes);
+            StylusDownEventCommand = new RelayCommand<StylusEventArgs>(OnStylusDown);
+            StylusUpEventCommand = new RelayCommand<StylusEventArgs>(OnStylusUp);
+            StylusMoveEventCommand = new RelayCommand<StylusEventArgs>(OnStylusMoved);
+            mySpeechManager = SpeechManager.Instance;
+
+            //LogStylusDataPlugin.StylusMoveProcessEnded += LogData_StylusMoveProcessEnded;
             HitStrokeTesterPlugin.StylusMoveProcessEnded += HitStrokeTesterPlugin_StylusMoveProcessEnded;
-            ResultsViewModel.ButtonClicked += ResultsViewModel_ButtonClicked;
             ExpertInkCanvas.ExpertStrokeLoadedEvent += ExpertInkCanvas_ExpertStrokeLoadedEvent;
-            //StudentInkCanvas.SpeedCheckedEvent += StudentInkCanvas_SpeedCheckedEvent;
         }
 
         #region EventDefinition
@@ -209,34 +221,30 @@ namespace CalligraphyTutor.ViewModel
         #endregion
 
         #region EventHandlers
-        //private void StudentInkCanvas_SpeedCheckedEvent(object sender, StudentInkCanvas.SpeedCheckedEventArgs e)
-        //{
-        //    SpeedIsChecked = e.state;
-        //}
         private void ExpertInkCanvas_ExpertStrokeLoadedEvent(object sender, ExpertInkCanvas.ExpertStrokeLoadedEventEventArgs e)
         {
             ExpertStrokeLoaded = e.state;
         }
-        private void LogData_StylusMoveProcessEnded(object sender, StylusMoveProcessEndedEventArgs e)
-        {
-            //assign the values
-            PenPressure_Student = e.Pressure;
-            Tilt_X_Student = e.XTilt;
-            Tilt_Y_Student = e.YTilt;
-            StrokeVelocity_Student = e.StrokeVelocity;
-            //send data to learning hub if the student is recording
-            if (this.StudentIsRecording == true)
-            {
-                try
-                {
-                    SendDataAsync();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("failed sending data: " + ex.StackTrace);
-                }
-            }
-        }
+       //private void LogData_StylusMoveProcessEnded(object sender, StylusMoveProcessEndedEventArgs e)
+       // {
+       //     //assign the values
+       //     PenPressure_Student = e.Pressure;
+       //     Tilt_X_Student = e.XTilt;
+       //     Tilt_Y_Student = e.YTilt;
+       //     StrokeVelocity_Student = e.StrokeVelocity;
+       //     //send data to learning hub if the student is recording
+       //     if (this.StudentIsRecording == true)
+       //     {
+       //         try
+       //         {
+       //             SendDataAsync();
+       //         }
+       //         catch (Exception ex)
+       //         {
+       //             Debug.WriteLine("failed sending data: " + ex.StackTrace);
+       //         }
+       //     }
+        //}
         private void HitStrokeTesterPlugin_StylusMoveProcessEnded(object sender, HitStrokeTesterPlugin.StylusMoveProcessEndedEventArgs e)
         {
             //assign the values
@@ -259,76 +267,31 @@ namespace CalligraphyTutor.ViewModel
         }
         private void MyConnectorHub_stopRecordingEvent(object sender)
         {
-            globals.Speech.SpeakAsync("stop recording");
+            mySpeechManager.Speech.SpeakAsync("stop recording");
             StartRecordingData();
         }
         private void MyConnectorHub_startRecordingEvent(object sender)
         {
-            globals.Speech.SpeakAsync("start recording");
+            mySpeechManager.Speech.SpeakAsync("start recording");
             StartRecordingData();
-        }
-        private void ResultsViewModel_ButtonClicked(object sender, EventArgs e)
-        {
-            StayOpen = false;
-        }
-        private void MyFeedback_feedbackReceivedEvent(object sender, string feedback)
-        {
-            Debug.WriteLine("Feedback Received");
-            //if (globals.Speech.State != SynthesizerState.Speaking)
-            //{
-            //    //ReadStream(feedback);
-            //}
         }
         #endregion
 
         #region Icommand Overrides
-        private ICommand _StylusDown;
-        /// <summary>
-        /// Icommand method for binding stylusdown handler to the event.
-        /// </summary>
-        public ICommand StudentInkCanvas_StylusDown
-        {
-            get
-            {
-                _StylusDown = new RelayCommand(
-                    param => this.StudentView_OnStylusDown(param),
-                    null
-                    );
-
-                return _StylusDown;
-            }
-        }
-        private void StudentView_OnStylusDown(Object param)
+        public void OnStylusDown(StylusEventArgs e)
         {
             cts = new CancellationTokenSource();
             Debug.WriteLine("PenDown");
             //StylusEventArgs args = (StylusEventArgs)param; 
         }
-
-        private ICommand _StylusUp;
-        /// <summary>
-        /// Icommand method for binding stylus up handler to the event.
-        /// </summary>
-        public ICommand StudentInkCanvas_StylusUp
-        {
-            get
-            {
-                _StylusUp = new RelayCommand(
-                    param => this.StudentView_OnStylusUp(param),
-                    null
-                    );
-
-                return _StylusUp;
-            }
-        }
-        private void StudentView_OnStylusUp(Object param)
+        private void OnStylusUp(StylusEventArgs e)
         {
             //cancel async task
             if (cts != null)
             {
                 cts.Cancel();
             }
-            Debug.WriteLine("PenUp");
+            //Debug.WriteLine("PenUp");
             //reset all value when the pen is lifted
             PenPressure_Student = 0f;
             Tilt_X_Student = 0f;
@@ -337,28 +300,11 @@ namespace CalligraphyTutor.ViewModel
             StrokeDeviation_Student = 0d;
 
         }
-
-        private ICommand _StylusMoved;
-        /// <summary>
-        /// Icommand method for binding stylusMoved handler to the event.
-        /// </summary>
-        public ICommand StudentInkCanvas_StylusMoved
-        {
-            get
-            {
-                _StylusMoved = new RelayCommand(
-                    param => this.StudentView_OnStylusMoved(param),
-                    null
-                    );
-
-                return _StylusMoved;
-            }
-        }
         /// <summary>
         /// value that holds the last iteration point to calculate the distance. Instantiated 
         /// </summary>
         private Point prevPoint = new Point(double.NegativeInfinity, double.NegativeInfinity);
-        private void StudentView_OnStylusMoved(Object param)
+        private void OnStylusMoved(Object param)
         {
             //cast the parameter as stylyus event args
             StylusEventArgs args = (StylusEventArgs)param;
@@ -366,7 +312,7 @@ namespace CalligraphyTutor.ViewModel
             {
                 //add a value to the expert average velocity to provide a area of error
                 Stroke ExpertStroke = SelectNearestExpertStroke(new Stroke(args.GetStylusPoints(((StudentInkCanvas)(args.Source)))),ExpertStrokes);
-                StrokeVelocity_Expert = CalculateAverageExpertStrokeVelocity(ExpertStroke);
+                //StrokeVelocity_Expert = CalculateAverageExpertStrokeVelocity(ExpertStroke);
                 double ExpertVelocity = StrokeVelocity_Expert + 5;
                 if (SpeedIsChecked == true && ExpertStrokeLoaded == true)
                 {
@@ -449,27 +395,14 @@ namespace CalligraphyTutor.ViewModel
             values.Add(PenPressure_Expert.ToString());
             //values.Add(StrokeVelocity_Expert.ToString());
             myConnectorHub.StoreFrame(values);
-            //globals.Speech.SpeakAsync("Student Data sent");
+            //mySpeechManager.Speech.SpeakAsync("Student Data sent");
         }
         #endregion
 
         #region Methods called by the buttons
-        private ICommand _buttonClicked;
         public void ClearStrokes()
         {
             StudentStrokes.Clear();
-        }
-        public ICommand ClearButton_clicked
-        {
-            get
-            {
-                _buttonClicked = new RelayCommand(
-                    param => this.ClearStrokes(),
-                    null
-                    );
-
-                return _buttonClicked;
-            }
         }
         private void LoadStrokes()
         {
@@ -488,34 +421,7 @@ namespace CalligraphyTutor.ViewModel
             //start the timer
             //_studentTimer.Start();
         }
-        public ICommand LoadButton_clicked
-        {
-            get
-            {
-                _buttonClicked = new RelayCommand(
-                    param => this.LoadStrokes(),
-                    null
-                    );
 
-                return _buttonClicked;
-            }
-        }
-        public ICommand _recordButtonClicked;
-        public ICommand RecordButton_clicked
-        {
-            get
-            {
-                if (_recordButtonClicked == null)
-                {
-                        _recordButtonClicked = new RelayCommand(
-                            param => this.StartRecordingData(),
-                            null
-                            );
-                }
-                return _recordButtonClicked;
-            }
-
-        }
         private void StartRecordingData()
         {
             if (this.StudentIsRecording==false)
@@ -530,8 +436,7 @@ namespace CalligraphyTutor.ViewModel
                                 StudentStrokes.Clear();
                                 this.StudentIsRecording = true;
                                 RecordButtonName = "Stop Recording";
-                                RecordButtonColor = new SolidColorBrush(Colors.Green);
-                                StayOpen = false;
+                                RecordButtonColor = new SolidColorBrush(Colors.LightGreen);
                             }));
 
             }
@@ -548,7 +453,7 @@ namespace CalligraphyTutor.ViewModel
                     //StayOpen = true;
                 }));
             }
-            //globals.Speech.SpeakAsync("Student is recording "+ this.StudentIsRecording);
+            //mySpeechManager.Speech.SpeakAsync("Student is recording "+ this.StudentIsRecording);
         }
 
         #endregion
@@ -557,34 +462,39 @@ namespace CalligraphyTutor.ViewModel
         /// <summary>
         /// calculates the velocity of the stroke in seconds for expert stroke since the expert stroke could not be used in collection
         /// </summary>
-        public double CalculateAverageExpertStrokeVelocity(Stroke s)
+        public double GetExpertStrokeVelocity(Stroke s)
         {
             GuidAttribute IMyInterfaceAttribute = (GuidAttribute)Attribute.GetCustomAttribute(typeof(ExpertInkCanvas), typeof(GuidAttribute));
             //Debug.WriteLine("IMyInterface Attribute: " + IMyInterfaceAttribute.Value);
-            Guid expertTimestamp = new Guid(IMyInterfaceAttribute.Value);
+            Guid ExpertVelocity = new Guid(IMyInterfaceAttribute.Value);
+            double strokeVelocity = 0d;
 
-            //Debug.WriteLine("guids " + argsStroke.GetPropertyDataIds().Length);
-            double totalStrokeLenght = 0;
-            double velocity = 0;
-            for (int i = 0; i < s.StylusPoints.Count - 1; i++)
+            if (s.ContainsPropertyData(ExpertVelocity))
             {
-                //add all the distance between each stylus points in the stroke
-                totalStrokeLenght += CalcualteDistance(s.StylusPoints[i].ToPoint(), s.StylusPoints[i + 1].ToPoint());
-            }
+                object velocity = s.GetPropertyData(ExpertVelocity);
 
-            List<DateTime> timeStamps = new List<DateTime>();
-            if (s.ContainsPropertyData(expertTimestamp))
-            {
-                object data = s.GetPropertyData(expertTimestamp);
-                foreach (DateTime dt in (Array)data)
+                if (velocity is double)
                 {
-                    timeStamps.Add(dt);
+                    strokeVelocity = (double)velocity;
                 }
 
-                velocity = totalStrokeLenght / (timeStamps.Last() - timeStamps.First()).TotalSeconds;
             }
-            return velocity;
+            else
+            {
+                SendDebugMessage("The StrokeCollection does not have Velocity.");
+            }
 
+            return strokeVelocity;
+
+        }
+
+        /// <summary>
+        /// Call this method if you want this debug message to be displayed in the UI
+        /// </summary>
+        /// <param name="debugmessage"></param>
+        public void SendDebugMessage(String debugmessage)
+        {
+            MessengerInstance.Send(debugmessage, "DebugMessage");
         }
 
         /// <summary>

@@ -8,14 +8,13 @@
         Title="Calligraphy Tutor"
         xmlns:ViewModel="clr-namespace:CalligraphyTutor.ViewModel"
         xmlns:View="clr-namespace:CalligraphyTutor.View"
-        DataContext="{StaticResource MainWindowViewModel}"
         WindowStyle="SingleBorderWindow" ResizeMode="CanMinimize"  
+        DataContext="{StaticResource MainWindowViewModel}"
         WindowStartupLocation="CenterScreen" WindowState="Maximized">
-
     <Window.Resources>
-        <DataTemplate DataType="{x:Type ViewModel:MainViewModel}">
+        <DataTemplate DataType="{x:Type local:MainWindowViewModel}">
 
-            <View:MainWindowView/>
+            <TextBlock FontSize="32" FontWeight="Bold" FontFamily="Arial" Foreground="White" Text="Welcome to Calligraphy Tutor." />
 
         </DataTemplate>
 
@@ -31,13 +30,15 @@
 
         </DataTemplate>
 
+
     </Window.Resources>
+
 
     <Grid Background="#7ec0ee" Width="{Binding Path=ScreenWidth}" Height="{Binding Path=ScreenHeight}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="0.8*"/>
-            <RowDefinition Height="2.4*"/>
-            <RowDefinition Height="0.8*"/>
+            <RowDefinition Height="0.6*"/>
+            <RowDefinition Height="2.8*"/>
+            <RowDefinition Height="0.6*"/>
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0">
@@ -46,58 +47,35 @@
                 <ColumnDefinition Width="1*"/>
                 <ColumnDefinition Width="1*"/>
             </Grid.ColumnDefinitions>
-            
-            <Image VerticalAlignment="Center" Grid.Column="0" 
+
+            <Image VerticalAlignment="Center" Grid.Column="0" Width="250px" Height="200px"
                    Source="{Binding Path=ImageAddress}"/>
 
             <StackPanel VerticalAlignment="Center" Grid.Column="2" Margin="0,0,0,0">
 
-                <Button Content="Expert Calligrapher" Width="300" Height="40" Margin="5,5,5,5"
-                        Command = "{Binding ExpertButton_clicked}">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="White"/>
-                            <Setter Property="FontFamily" Value="Resources/#BLACKCHANCERY"/>
-                            <Setter Property="FontSize" Value="24"/>
-                        </Style>
-                    </Button.Style>
+                <Button Content="Expert Mode" Style="{StaticResource ButtonStyling}"
+                        IsEnabled="{Binding ExpertButtonIsEnabled, Mode=OneWay}" Command = "{Binding ExpertButtonCommand}"/>
 
-                </Button>
+                <Button Content="Student Mode" Style="{StaticResource ButtonStyling}"
+                        Command = "{Binding StudentButtonCommand}" IsEnabled="{Binding StudentButtonIsEnabled, Mode=OneWay}"/>
 
-                <Button Content="Student Calligrapher" Width="300" Height="40" Margin="5,5,5,5"
-                        Command = "{Binding StudentButton_clicked}">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="White"/>
-                            <Setter Property="FontFamily" Value="Resources/#BLACKCHANCERY"/>
-                            <Setter Property="FontSize" Value="24"/>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                <Button Content="Exit Application" Style="{StaticResource ButtonStyling}"
+                        Command="{Binding  CloseButtonCommand}"/>
 
-                <Button Content="Exit Application" Width="300" Height="40" Margin="5,5,5,5"
-                         Command="{Binding CloseButton_clicked, Mode=OneWay}" CommandParameter="{Binding ElementName=mWindow}">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Background" Value="White"/>
-                            <Setter Property="FontFamily" Value="Resources/#BLACKCHANCERY"/>
-                            <Setter Property="FontSize" Value="24"/>
-                        </Style>
-                    </Button.Style>
-                </Button>
             </StackPanel>
 
         </Grid>
-            
+        
         <Grid Grid.Row="1">
-            <ContentControl Content = "{Binding CurrentViewModel}"/>
+            <ContentControl HorizontalAlignment="Center" VerticalAlignment="Center" Content = "{Binding CurrentViewModel}"/>
         </Grid>
 
         <Grid Grid.Row="2" >
-            <TextBlock Margin="10,10,10,10" Background="Aquamarine"  Height="290"   Visibility="Hidden"
-                     Text=""/>
+            <TextBlock Margin="10,10,10,10" Background="#7ec0ee" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                       Text="{Binding DebugText}"/>
         </Grid>
     </Grid>
-    
+
 
 </Window>
+

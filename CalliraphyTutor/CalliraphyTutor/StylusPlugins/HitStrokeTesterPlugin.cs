@@ -1,4 +1,5 @@
-﻿using CalligraphyTutor.Model;
+﻿using CalligraphyTutor.CustomInkCanvas;
+using CalligraphyTutor.Model;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -125,9 +126,9 @@ namespace CalligraphyTutor.StylusPlugins
                 ExpertStylusPointsCollection.Add(s.StylusPoints);
             }
             ExpertStrokeLoaded = e.state;
-            //foreach (StylusPoint sp in ExpertStylusPointsCollection)
+            //foreach (StylusPoint ref_Stylus_Point in ExpertStylusPointsCollection)
             //{
-            //    Debug.WriteLine("loaded: "+ sp.GetPropertyValue(StylusPointProperties.NormalPressure));
+            //    Debug.WriteLine("loaded: "+ ref_Stylus_Point.GetPropertyValue(StylusPointProperties.NormalPressure));
             //}
         }
         #endregion
@@ -295,7 +296,7 @@ namespace CalligraphyTutor.StylusPlugins
 
            foreach (StylusPoint sp in expertStylusPointCollection)
             {
-                //Debug.WriteLine("selecting: "+ sp.GetPropertyValue(StylusPointProperties.NormalPressure));
+                //Debug.WriteLine("selecting: "+ ref_Stylus_Point.GetPropertyValue(StylusPointProperties.NormalPressure));
                 if (sp.GetPropertyValue(StylusPointProperties.NormalPressure) <= 100)
                 {
                     continue;

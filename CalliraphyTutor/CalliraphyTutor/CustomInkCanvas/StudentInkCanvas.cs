@@ -1,4 +1,5 @@
-﻿using CalligraphyTutor.StylusPlugins;
+﻿using CalligraphyTutor.CustomStroke;
+using CalligraphyTutor.StylusPlugins;
 using CalligraphyTutor.ViewModel;
 using System;
 using System.Collections.Generic;
@@ -12,11 +13,11 @@ using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace CalligraphyTutor.Model
+namespace CalligraphyTutor.CustomInkCanvas
 {
-    class StudentInkCanvas : InkCanvas
+    class StudentInkCanvas : BaseInkCanvas
     {
-        #region vars
+        #region Dependency Property
 
         /// <summary>
         /// Dependency property for binding the Stroke checked state from view model
@@ -94,49 +95,58 @@ namespace CalligraphyTutor.Model
                 SetValue(SpeedCheckedProperty, value);
             }
         }
+        #endregion
 
+        #region Property
+
+        #endregion
+
+        #region Vars
+        /// <summary>
+        /// Velocity at which the student draws the stroke
+        /// </summary>
+        private double studentVelocity = -0.01d;
+        /// <summary>
+        /// velocity at which the expert draws the stroke
+        /// </summary>
+        private double expertVelocity = -0.01d;
+
+        //LogStylusDataPlugin logStylusDataPlugin = new LogStylusDataPlugin();
+
+        /// <summary>
+        /// Plugin for checking the hitStroke with the expert stroke
+        /// </summary>
+        HitStrokeTesterPlugin hitStrokeTesterPlugin = new HitStrokeTesterPlugin();
         /// <summary>
         /// Custom Renderer for chaning the behaviour of the ink as it is being drawn
         /// </summary>
         private StudentDynamicRenderer studentCustomRenderer = new StudentDynamicRenderer();
 
-        private bool _isStylusDown = false;
         /// <summary>
-        /// True if the pen is touching the digitizer
+        /// Passes on the points to the StrokeClass which changes how the look of the final stroke.
         /// </summary>
-        public bool IsStylusDown
-        {
-            get { return _isStylusDown; }
-            set
-            {
-                _isStylusDown = value;
-            }
-        }
-
-        Guid studentTimestamp = new Guid("12345678-9012-3456-7890-123456789012");
-        List<DateTime> StrokeTime = new List<DateTime>();
-
-        LogStylusDataPlugin logStylusDataPlugin = new LogStylusDataPlugin();
-        HitStrokeTesterPlugin hitStrokeTesterPlugin = new HitStrokeTesterPlugin();
-
-        private double studentVelocity = 0d;
-        private double expertVelocity = -0.01d;
-
         private Dictionary<Stroke, Color> hitChangedPoints = new Dictionary<Stroke, Color>();
+
+        
+        Guid studentTimestamp = new Guid("12345678-9012-3456-7890-123456789012");
+        /// <summary>
+        /// Stores time required to create the stroke
+        /// </summary>
+        List<DateTime> StrokeTime = new List<DateTime>();
         #endregion
 
         /// <summary>
         /// Constructor
         /// </summary>
-        public StudentInkCanvas() : base()
+        public StudentInkCanvas()
         {
             //instantiate the customDynamicRenderer
             studentCustomRenderer = new StudentDynamicRenderer();
             this.DynamicRenderer = studentCustomRenderer;
             StudentViewModel.ExpertVelocityCalculatedEvent += StudentViewModel_ExpertVelocityCalculatedEvent;
-            
+            this.EditingMode = InkCanvasEditingMode.Ink;
             this.StylusPlugIns.Add(hitStrokeTesterPlugin);
-            this.StylusPlugIns.Add(logStylusDataPlugin);
+            //this.StylusPlugIns.Add(logStylusDataPlugin);
             LogStylusDataPlugin.StylusMoveProcessEnded += LogStylusDataPlugin_StylusMoveProcessEnded;
             HitStrokeTesterPlugin.HitChangePointsEvent += HitStrokeTesterPlugin_HitChangePointsEvent;
             this.DefaultDrawingAttributes.FitToCurve = false;
@@ -160,7 +170,25 @@ namespace CalligraphyTutor.Model
         }
         public class PenDownUpEventEventArgs : EventArgs
         {
-            public bool state { get; set; }
+            public bool IsPenDown { get; set; }
+        }
+
+        /// <summary>
+        /// Event raised when the pen is in Range. declared it as static as the listening class would only listen to the object.
+        /// thid event is subscribed by the expert inkcanvas and stops the animation
+        /// </summary>
+        public static event EventHandler<PenInRangeEventEventArgs> PenInRangeEvent;
+        protected virtual void OnPenInRangeEvent(PenInRangeEventEventArgs e)
+        {
+            EventHandler<PenInRangeEventEventArgs> handler = PenInRangeEvent;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
+        }
+        public class PenInRangeEventEventArgs : EventArgs
+        {
+            public Point Stylus_Point { get; set; }
         }
 
         /// <summary>
@@ -233,27 +261,30 @@ namespace CalligraphyTutor.Model
         #endregion
 
         #region OverRides
-
-        protected override void OnStylusDown(StylusDownEventArgs e)
+        protected override void OnStylusButtonDown(StylusButtonEventArgs e)
         {
-            //raise the pendown event for the expertinkcanvas to stop the animation
-            IsStylusDown = true;
+            //raise an event to let expert inkcanvas know that the pen is down
             PenDownUpEventEventArgs args = new PenDownUpEventEventArgs();
-            args.state = IsStylusDown;
+            args.IsPenDown = true;
             OnPenDownUpEvent(args);
-            base.OnStylusDown(e);
-
+            base.OnStylusButtonDown(e);
         }
 
-        protected override void OnStylusUp(StylusEventArgs e)
+        protected override void OnStylusButtonUp(StylusButtonEventArgs e)
         {
-            //StrokeTime = new List<DateTime>();
-            IsStylusDown = false;
+            //raise an event to let expert inkcanvas know that the pen is up
             PenDownUpEventEventArgs args = new PenDownUpEventEventArgs();
-            args.state = IsStylusDown;
+            args.IsPenDown = false;
             OnPenDownUpEvent(args);
+            base.OnStylusButtonUp(e);
+        }
 
-            base.OnStylusUp(e);
+        protected override void OnStylusInRange(StylusEventArgs e)
+        {
+            PenInRangeEventEventArgs args = new PenInRangeEventEventArgs();
+            args.Stylus_Point = e.GetPosition((InkCanvas)e.Source);
+            OnPenInRangeEvent(args);
+            base.OnStylusInRange(e);
         }
 
         protected override void OnStylusMove(StylusEventArgs e)

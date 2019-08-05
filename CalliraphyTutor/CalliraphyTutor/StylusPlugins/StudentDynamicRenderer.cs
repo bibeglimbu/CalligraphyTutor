@@ -1,4 +1,5 @@
-﻿using CalligraphyTutor.StylusPlugins;
+﻿using CalligraphyTutor.CustomInkCanvas;
+using CalligraphyTutor.StylusPlugins;
 using CalligraphyTutor.ViewModel;
 using System;
 using System.Collections.Generic;
@@ -11,8 +12,11 @@ using System.Windows.Input;
 using System.Windows.Input.StylusPlugIns;
 using System.Windows.Media;
 
-namespace CalligraphyTutor.Model
+namespace CalligraphyTutor.StylusPlugins
 {
+    /// <summary>
+    /// Custom Dynamic renderer for rendering ink while it is being drawn.
+    /// </summary>
     class StudentDynamicRenderer : DynamicRenderer
     {
         #region Vars & properties
@@ -69,7 +73,7 @@ namespace CalligraphyTutor.Model
         private void StudentInkCanvas_PressureCheckedEvent(object sender, StudentInkCanvas.PressureCheckedEventArgs e)
         {
             IsPressureChecked = e.state;
-            StrokeColor = Colors.Green;
+            //StrokeColor = Colors.Green;
         }
         #endregion
 
@@ -126,8 +130,6 @@ namespace CalligraphyTutor.Model
 
         protected override void OnStylusDownProcessed(object callbackData, bool targetVerified)
         {
-            this.DrawingAttributes.Width = Globals.Instance.StrokeWidth;
-            this.DrawingAttributes.Height = Globals.Instance.StrokeHeight;
             StrokeColor = Colors.Green;
         }
         #endregion

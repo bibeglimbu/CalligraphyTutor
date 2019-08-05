@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Input.StylusPlugIns;
 
-namespace CalligraphyTutor.CustomInkCanvas
+namespace CalligraphyTutor.StylusPlugins
 {
     class StylusPointsDependencyProperty : StylusPlugIn
     {

@@ -1,30 +1,28 @@
 ﻿using CalligraphyTutor.Model;
-using CalligraphyTutor.View;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Speech.Synthesis;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Ink;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Threading;
-using System.Runtime.InteropServices;
 using CalligraphyTutor.StylusPlugins;
+using GalaSoft.MvvmLight;
+using GalaSoft.MvvmLight.CommandWpf;
+using CalligraphyTutor.CustomInkCanvas;
+using CalligraphyTutor.Managers;
 
 namespace CalligraphyTutor.ViewModel
 {
-    public class ExpertViewModel: BindableBase
+    public class ExpertViewModel: ViewModelBase
     {
-        #region VARS & Property
-
-        //Helps set the screen size of the application in the view
+        #region Property
         private int _screenWidth = (int)SystemParameters.PrimaryScreenWidth;
+        /// <summary>
+        /// Used for stretching the canvas horizontally
+        /// </summary>
         public int ScreenWidth
         {
             get { return _screenWidth; }
@@ -34,43 +32,10 @@ namespace CalligraphyTutor.ViewModel
                 RaisePropertyChanged("ScreenWidth");
             }
         }
-        private int _screenHeight = (int)SystemParameters.PrimaryScreenHeight;
-        public int ScreenHeight
-        {
-            get { return _screenHeight; }
-            set
-            {
-                _screenHeight = value;
-
-                RaisePropertyChanged("ScreenHeight");
-            }
-        }
-        //name of the button
-        private string _recordButtonName = "Start Recording";
-        public String RecordButtonName
-        {
-            get { return _recordButtonName; }
-            set
-            {
-                    _recordButtonName = value;
-                    RaisePropertyChanged();
-            }
-        }
-        //PreviousColor of the button
-        private Brush brush = new SolidColorBrush(Colors.White);
-        public Brush RecordButtonColor
-        {
-            get { return brush; }
-            set
-            {
-                    brush = value;
-                    RaisePropertyChanged();
-            }
-        }
 
         private bool isChecked = true;
         /// <summary>
-        /// enables evaluation mode where no feedback is provided at all.
+        /// Animation is disabled when checked
         /// </summary>
         public bool IsChecked
         {
@@ -83,12 +48,10 @@ namespace CalligraphyTutor.ViewModel
             }
         }
 
-        private float PenPressure = 0f;
-        private float Tilt_X = 0f;
-        private float Tilt_Y = 0f;
-        private double StrokeVelocity = 0d;
-
         private StrokeCollection _expertStrokes = new StrokeCollection();
+        /// <summary>
+        /// Used for holding a reference to the strokes property of the inkcanvas
+        /// </summary>
         public StrokeCollection ExpertStrokes
         {
             get { return _expertStrokes; }
@@ -96,39 +59,157 @@ namespace CalligraphyTutor.ViewModel
             {
                 Debug.WriteLine("ExpertStroke added");
                 _expertStrokes = value;
-                RaisePropertyChanged();
+                RaisePropertyChanged("ExpertStrokes");
             }
         }
 
-        ConnectorHub.ConnectorHub myConnectorHub;
-        Globals globals;
-
+        private string _debugMessage = "";
         /// <summary>
-        /// holds state if the recroding button is clicked or not
+        /// Property that Updates the debug UI in the main window
         /// </summary>
-        private bool ExpertIsRecording = false;
+        public string DebugMessage
+        {
+            get { return _debugMessage; }
+            set {
+                _debugMessage = value;
+                SendDebugMessage(_debugMessage);
+            }
+
+        }
+
+        private SpeechManager mySpeechManager = SpeechManager.Instance;
+
+        private bool _loadButtonIsEnabled = false;
+        public bool LoadButtonIsEnabled
+        {
+            get { return _loadButtonIsEnabled; }
+            set
+            {
+                _loadButtonIsEnabled = value;
+                RaisePropertyChanged("LoadButtonIsEnabled");
+            }
+        }
+
+        private string _recordButtonName = "Start Recording";
+        /// <summary>
+        /// Used to switch the name of the button when pressed
+        /// </summary>
+        public String RecordButtonName
+        {
+            get { return _recordButtonName; }
+            set
+            {
+                _recordButtonName = value;
+                RaisePropertyChanged("RecordButtonName");
+            }
+        }
+
+        private Brush brush = new SolidColorBrush(Colors.White);
+        /// <summary>
+        /// Used to switch the color of the button when pressed
+        /// </summary>
+        public Brush RecordButtonColor
+        {
+            get { return brush; }
+            set
+            {
+                brush = value;
+                RaisePropertyChanged("RecordButtonColor");
+            }
+        }
 
         #endregion
 
+        #region Vars
+        /// <summary>
+        /// holds state if the recroding button is clicked or not
+        /// </summary>
+        private bool IsRecording = false;
+        private ConnectorHub.ConnectorHub myConnectorHub;
+        #endregion
+
+        #region ReplayCommand
+        public RelayCommand<StylusEventArgs> StylusMovedEventCommand { get; set; }
+        public RelayCommand<StylusEventArgs> StylusUpEventCommand { get; set; }
+        public RelayCommand RecordButtonCommand { get; set; }
+        public RelayCommand ClearButtonCommand { get; set; }
+        public RelayCommand LoadButtonCommand { get; set; }
+        #endregion
+
+        #region StylusData
+        private float PenPressure = 0f;
+        private float Tilt_X = 0f;
+        private float Tilt_Y = 0f;
+        private double StrokeVelocity = 0d;
+        #endregion
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
         public ExpertViewModel()
         {
-            globals = Globals.Instance;
-            LogStylusDataPlugin.StylusMoveProcessEnded += LogStylusDataPlugin_StylusMoveProcessEnded;   
+            StylusMovedEventCommand = new RelayCommand<StylusEventArgs>(OnStylusMoved);
+            StylusUpEventCommand = new RelayCommand<StylusEventArgs>(OnStylusUp);
+            RecordButtonCommand = new RelayCommand(StartRecordingData);
+            ClearButtonCommand = new RelayCommand(ClearStrokes);
+            InitLearningHub();
         }
 
-        private void LogStylusDataPlugin_StylusMoveProcessEnded(object sender, StylusMoveProcessEndedEventArgs e)
+        #region Methods called by the buttons
+        public void ClearStrokes()
         {
-            //send data to learning hub if the student is recording
-            if (this.ExpertIsRecording == true)
+            ExpertStrokes.Clear();
+            SendDebugMessage("Canvas cleared");
+
+        }
+
+        public void SaveStrokes()
+        {
+            if (ExpertStrokes.Count != 0)
             {
-                    //assign the values
-                    PenPressure = e.Pressure;
-                    Tilt_X = e.XTilt;
-                    Tilt_Y = e.YTilt;
-                    StrokeVelocity = e.StrokeVelocity;
-                    SendDataAsync();
+                Debug.WriteLine("guids " + ExpertStrokes[ExpertStrokes.Count-1].GetPropertyDataIds().Length);
+                FileManager.Instance.SaveStroke(ExpertStrokes);
+            }
+            else
+            {
+                Debug.WriteLine("Expert Canvas Strokes is: " + ExpertStrokes.Count);
+            }
+
+        }
+        #endregion
+
+        #region EventHandlers
+        public void OnStylusUp(StylusEventArgs e)
+        {
+            //rest the values when the pen is put up.
+            PenPressure = 0f;
+            Tilt_X = 0f;
+            Tilt_Y = 0f;
+            StrokeVelocity = 0d;
+    }
+        public void OnStylusMoved(StylusEventArgs e)
+        {
+            StylusPointCollection strokePoints = e.GetStylusPoints((UIElement)e.OriginalSource);
+            if (strokePoints.Count == 0)
+            {
+                SendDebugMessage("No StylusPoints");
+                return;
+            }
+            if (IsRecording == true)
+            {
+                Task.Run(() => {
+                    foreach (StylusPoint sp in strokePoints)
+                    {
+                        PenPressure = sp.GetPropertyValue(StylusPointProperties.NormalPressure);
+                        Tilt_X = sp.GetPropertyValue(StylusPointProperties.XTiltOrientation);
+                        Tilt_Y = sp.GetPropertyValue(StylusPointProperties.YTiltOrientation);
+                        StrokeVelocity = 0d;
+                        SendDataAsync();
+                    }
+                });
 
             }
+
         }
 
         private void MyConnectorHub_stopRecordingEvent(object sender)
@@ -142,15 +223,69 @@ namespace CalligraphyTutor.ViewModel
             //SendDebug("start");
             StartRecordingData();
         }
+        #endregion
+
+        #region Native Methods
+        /// <summary>
+        /// Call this method if you want this debug message to be displayed in the UI
+        /// </summary>
+        /// <param name="debugmessage"></param>
+        public void SendDebugMessage(String debugmessage)
+        {
+            MessengerInstance.Send(debugmessage, "DebugMessage");
+        }
+
+        /// <summary>
+        /// Called when recording is started
+        /// </summary>
+        private void StartRecordingData()
+        {
+            //SendDebug(RecordButtonName.ToString());
+            if (IsRecording.Equals(false))
+            {
+
+                Application.Current.Dispatcher.InvokeAsync(new Action(
+                    () =>
+                    {
+                        IsRecording = true;
+                        RecordButtonName = "Stop Recording";
+                        RecordButtonColor = new SolidColorBrush(Colors.LightGreen);
+                        ClearStrokes();
+                    }));
+                if (mySpeechManager.Speech.State != SynthesizerState.Speaking)
+                {
+                    mySpeechManager.Speech.SpeakAsync("Expert Is recording" + IsRecording.ToString());
+                }
+
+            }
+            else
+            {
+                Application.Current.Dispatcher.InvokeAsync(new Action(
+                    () =>
+                    {
+                        SaveStrokes();
+                        IsRecording = false;
+                        RecordButtonName = "Start Recording";
+                        RecordButtonColor = new SolidColorBrush(Colors.White);
+                        ClearStrokes();
+                    }));
+                if (mySpeechManager.Speech.State != SynthesizerState.Speaking)
+                {
+                    mySpeechManager.Speech.SpeakAsync("Expert Is recording" + IsRecording.ToString());
+                }
+
+            }
+        }
+
+        #endregion
 
         #region Send data
         /// <summary>
         /// initializes the learning hub
         /// </summary>
-        private async void initLearningHub()
+        private async void InitLearningHub()
         {
-            await Task.Run(() =>
-            {
+            await Task.Run(() => {
                 myConnectorHub = new ConnectorHub.ConnectorHub();
                 myConnectorHub.Init();
                 myConnectorHub.SendReady();
@@ -166,15 +301,14 @@ namespace CalligraphyTutor.ViewModel
         private void SetValueNames()
         {
             List<string> names = new List<string>();
-            names.Add("StrokeVelocity_Student");
-            names.Add("PenPressure_Student");
-            names.Add("Tilt_X_Student");
-            names.Add("Tilt_Y_Student");
-
+            names.Add("StrokeVelocity");
+            names.Add("PenPressure");
+            names.Add("Tilt_X");
+            names.Add("Tilt_Y");
             myConnectorHub.SetValuesName(names);
 
         }
-        
+
         /// <summary>
         /// For calling the <see cref="SendData(StylusEventArgs, StylusPoint)"/> async
         /// </summary>
@@ -200,152 +334,13 @@ namespace CalligraphyTutor.ViewModel
                 values.Add(Tilt_Y.ToString());
                 myConnectorHub.StoreFrame(values);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Debug.WriteLine(e.StackTrace);
             }
 
         }
 
-        #endregion
-
-        #region Methods called by the buttons
-        private ICommand _buttonClicked;
-        public void ClearStrokes()
-        {
-            ExpertStrokes.Clear();
-
-        }
-        public ICommand ClearButton_clicked
-        {
-            get
-            {
-                _buttonClicked = new RelayCommand(
-                    param => ClearStrokes(),
-                    null
-                    );
-
-                return _buttonClicked;
-            }
-        }
-
-        public ICommand RecordButton_clicked
-        {
-            get
-            {
-                _buttonClicked = new RelayCommand(
-                    param => StartRecordingData(),
-                    null
-                    );
-
-                return _buttonClicked;
-            }
-        }
-
-        private void StartRecordingData()
-        {
-            //SendDebug(RecordButtonName.ToString());
-            if (ExpertIsRecording.Equals(false))
-            {
-                
-                Application.Current.Dispatcher.InvokeAsync(new Action(
-                    () =>
-                    {
-                        ExpertIsRecording = true;
-                        RecordButtonName = "Stop Recording";
-                        RecordButtonColor = new SolidColorBrush(Colors.Green);
-                        ExpertStrokes.Clear();
-                    }));
-                if (globals.Speech.State != SynthesizerState.Speaking)
-                {
-                    globals.Speech.SpeakAsync("Expert Is recording" + ExpertIsRecording.ToString());
-                }
-               
-            }
-            else
-            {
-                Application.Current.Dispatcher.InvokeAsync(new Action(
-                    () =>
-                    {
-                        SaveStrokes();
-                        ExpertIsRecording = false;
-                        RecordButtonName = "Start Recording";
-                        RecordButtonColor = new SolidColorBrush(Colors.White);
-                        ExpertStrokes.Clear();
-                    }));
-                if (globals.Speech.State != SynthesizerState.Speaking )
-                {
-                    globals.Speech.SpeakAsync("Expert Is recording" + ExpertIsRecording.ToString());
-                }
-
-            }
-        }
-
-        public void SaveStrokes()
-        {
-            if (ExpertStrokes.Count != 0)
-            {
-                Debug.WriteLine("guids " + ExpertStrokes[ExpertStrokes.Count-1].GetPropertyDataIds().Length);
-                FileManager.Instance.SaveStroke(ExpertStrokes);
-            }
-            else
-            {
-                Debug.WriteLine("Expert Canvas Strokes is: " + ExpertStrokes.Count);
-            }
-
-        }
-        #endregion
-
-        #region Events
-        private ICommand _stylusDown;
-        public ICommand ExpertCanvas_OnStylusDown
-        {
-            get
-            {
-                _stylusDown = new RelayCommand(
-                    param => OnStylusDown(param),
-                    null
-                    );
-
-                return _stylusDown;
-            }
-        }
-        private ICommand _stylusInRange;
-        public ICommand ExpertCanvas_StylusInRange
-        {
-            get
-            {
-                _stylusInRange = new RelayCommand(
-                    param => OnStylusInRange(param),
-                    null
-                    );
-
-                return _stylusInRange;
-            }
-        }
-
-        private void OnStylusInRange(object Param)
-        {
-            if (myConnectorHub == null)
-            {
-                initLearningHub();
-            }
-
-        }
-
-        private void OnStylusDown(object Param)
-        {
-            StylusEventArgs args = (StylusEventArgs)Param;
-            if (IsChecked == true)
-            {
-                ((ExpertInkCanvas)args.Source).DisplayAnimation = false;
-            }
-            else
-            {
-                ((ExpertInkCanvas)args.Source).DisplayAnimation = true;
-            }
-
-        }
         #endregion
     }
 }
