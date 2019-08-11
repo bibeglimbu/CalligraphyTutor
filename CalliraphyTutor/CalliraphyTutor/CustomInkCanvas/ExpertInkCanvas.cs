@@ -1,5 +1,4 @@
-﻿
-using CalligraphyTutor.CustomStroke;
+﻿using CalligraphyTutor.Managers;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -23,20 +22,18 @@ namespace CalligraphyTutor.CustomInkCanvas
         /// Timer for animation
         /// </summary>
         private DispatcherTimer _dispatchTimer = new DispatcherTimer();
-        /// <summary>
-        /// Stores the time taken to create the stroke
-        /// </summary>
-        Guid ExpertTimestamp = new Guid("12345678-9012-3456-7890-123456789E13");
-        Guid ExpertVelocity = new Guid("12345678-9012-3456-7890-123456789E12");
-        List<DateTime> StrokeTime = new List<DateTime>();
+
+        Guid ExpertVelocity_Guid = new Guid("12345678-9012-3456-7890-123456789E12");
+        
         /// <summary>
         /// true when the animation is still playing
         /// </summary>
         public bool AnimationPlaying = false;
+
         /// <summary>
-        /// holds the total length of the stroke
+        /// Manage
         /// </summary>
-        private double strokeLength = 0.0f;
+        StrokeAttributesManager myStrokeAttManager;
         #endregion
 
         #region Properties
@@ -95,9 +92,8 @@ namespace CalligraphyTutor.CustomInkCanvas
 
             StudentInkCanvas.PenDownUpEvent += StudentInkCanvas_PenDownUpEvent;
             StudentInkCanvas.PenInRangeEvent += StudentInkCanvas_PenInRangeEvent;
+            myStrokeAttManager = new StrokeAttributesManager();
         }
-
-
 
         #region EventHandlers
         private void StudentInkCanvas_PenInRangeEvent(object sender, StudentInkCanvas.PenInRangeEventEventArgs e)
@@ -189,25 +185,17 @@ namespace CalligraphyTutor.CustomInkCanvas
             //set the animation playing to false as the thread can be terminsated in the middle and it can still be true even when no animation is running
             AnimationPlaying = false;
             //add styluspoint from the event after checking to ensure that the collection doesnt already posses them
-            StrokeTime.Add(DateTime.Now);
+            myStrokeAttManager.StrokeTime.Add(e.Timestamp);
+            Debug.WriteLine("TimeTaken_PenDown:" + e.Timestamp);
             base.OnStylusDown(e);
         }
 
         protected override void OnStylusMove(StylusEventArgs e)
         {
-            //add to the strokelength holder to calculate the final velocity
-            CalculateStrokeLength(new Stroke(e.GetStylusPoints((InkCanvas)e.Source)));
+            //add styluspoint from the event after checking to ensure that the collection doesnt already posses them
+            myStrokeAttManager.StrokeTime.Add(e.Timestamp);
+            Debug.WriteLine("TimeTaken_StylusUp:" + e.Timestamp);
             base.OnStylusMove(e);
-        }
-
-        protected override void OnStylusInAirMove(StylusEventArgs e)
-        {
-            //update the ref_Stylus_Point if Animation has finished playing
-            if (AnimationPlaying == false)
-            {
-                ref_Stylus_Point = e.GetPosition((InkCanvas)e.Source);
-            }
-            base.OnStylusInAirMove(e);
         }
 
         protected override void OnStylusInRange(StylusEventArgs e)
@@ -240,20 +228,18 @@ namespace CalligraphyTutor.CustomInkCanvas
         protected override void OnStrokeCollected(InkCanvasStrokeCollectedEventArgs e)
         {
             //add styluspoint from the event after checking to ensure that the collection doesnt already posses them
-            StrokeTime.Add(DateTime.Now);
             this.Strokes.Remove(e.Stroke);
             if (e.Stroke.StylusPoints.Count > 2)
             {
                 //create a custom Stroke
                 Stroke customStroke = new Stroke(e.Stroke.StylusPoints);
-                //attach the time data
-                customStroke.AddPropertyData(ExpertTimestamp, StrokeTime.ToArray());
-                double expertVelocity = CalculateExpertVelocity();
-                customStroke.AddPropertyData(ExpertVelocity, expertVelocity);
+                double expertVelocity = myStrokeAttManager.CalculateVelocity(customStroke);
+                Debug.WriteLine("Expert Velocity: " + expertVelocity);
+                //attach customStroke
+                customStroke.AddPropertyData(ExpertVelocity_Guid, expertVelocity);
                 this.Strokes.Add(customStroke);
             }
-            StrokeTime = new List<DateTime>();
-            strokeLength = 0.0f;
+            myStrokeAttManager.StrokeTime = new List<int>();
         }
 
         #endregion
@@ -341,7 +327,7 @@ namespace CalligraphyTutor.CustomInkCanvas
                     }
                     catch
                     {
-                        Debug.WriteLine("ExpertInkCanvas/ChildrenCount= " + this.Children.Count);
+                        DebugMessageHandler.SetDebugMessage(this, "ExpertInkCanvas/ChildrenCount= " + this.Children.Count);
                     }
                 }
                 animationCurrentFrame += 1;
@@ -375,59 +361,7 @@ namespace CalligraphyTutor.CustomInkCanvas
             _dispatchTimer.Stop();
         }
 
-        /// <summary>
-        /// Extracts the datatime GUID from the stroke. Currently bugs the GUI thread and should only be used when crucial
-        /// </summary>
-        /// <param name="s"></param>
-        private void GetTimestamp(Stroke s)
-        {
-                if (s.ContainsPropertyData(ExpertTimestamp))
-                {
-                    object date = s.GetPropertyData(ExpertTimestamp);
-                    object velocity = s.GetPropertyData(ExpertVelocity);
 
-                    if (date is DateTime[])
-                    {
-                        DebugMessageHandler.SetDebugMessage(this, "StrokeTime: " + ((DateTime[])date)[1].ToString());
-                    }
-
-                    if (velocity is double)
-                    {
-                        DebugMessageHandler.SetDebugMessage(this, "StrokeVelocity: " + velocity.ToString());
-                    }
-
-                }
-                else
-                {
-                    DebugMessageHandler.SetDebugMessage(this, "The StrokeCollection does not have a timestamp.");
-                }  
-        }
-
-        /// <summary>
-        /// Adds the total lenght of the stroke
-        /// </summary>
-        /// <param name="s"></param>
-        private async void CalculateStrokeLength(Stroke s)
-        {
-            await Task.Run(() => {
-                for(int i=0; i<s.StylusPoints.Count-1; i++)
-                {
-                    strokeLength += CalcualteDistance(s.StylusPoints[i].ToPoint(), 
-                        s.StylusPoints[i+1].ToPoint());
-                }
-            });
-        }
-
-        /// <summary>
-        /// Returns expert velocity in seconds
-        /// </summary>
-        /// <returns></returns>
-        private double CalculateExpertVelocity()
-        {
-            double timeTaken = (StrokeTime.Last() - StrokeTime.First()).TotalSeconds;
-            double velocity = strokeLength / timeTaken;
-            return velocity;
-        }
     }
     #endregion
 }

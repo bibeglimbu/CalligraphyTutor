@@ -43,7 +43,7 @@ namespace CalligraphyTutor.ViewModel
             set
             {
                 isChecked = value;
-                Debug.WriteLine("IsChecked = " + IsChecked);
+                //Debug.WriteLine("IsChecked = " + IsChecked);
                 RaisePropertyChanged();
             }
         }
@@ -57,7 +57,7 @@ namespace CalligraphyTutor.ViewModel
             get { return _expertStrokes; }
             set
             {
-                Debug.WriteLine("ExpertStroke added");
+                SendDebugMessage("ExpertStroke added");
                 _expertStrokes = value;
                 RaisePropertyChanged("ExpertStrokes");
             }
@@ -167,12 +167,12 @@ namespace CalligraphyTutor.ViewModel
         {
             if (ExpertStrokes.Count != 0)
             {
-                Debug.WriteLine("guids " + ExpertStrokes[ExpertStrokes.Count-1].GetPropertyDataIds().Length);
+                SendDebugMessage("guids " + ExpertStrokes[ExpertStrokes.Count-1].GetPropertyDataIds().Length);
                 FileManager.Instance.SaveStroke(ExpertStrokes);
             }
             else
             {
-                Debug.WriteLine("Expert Canvas Strokes is: " + ExpertStrokes.Count);
+                SendDebugMessage("Expert Canvas Strokes is: " + ExpertStrokes.Count);
             }
 
         }
@@ -204,7 +204,7 @@ namespace CalligraphyTutor.ViewModel
                         Tilt_X = sp.GetPropertyValue(StylusPointProperties.XTiltOrientation);
                         Tilt_Y = sp.GetPropertyValue(StylusPointProperties.YTiltOrientation);
                         StrokeVelocity = 0d;
-                        SendDataAsync();
+                        //SendDataAsync();
                     }
                 });
 

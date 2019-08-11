@@ -154,8 +154,7 @@ namespace CalligraphyTutor.ViewModel
         /// Instantiation of the learning hub
         /// </summary>
         ConnectorHub.ConnectorHub myConnectorHub;
-        // Declare a System.Threading.CancellationTokenSource.
-        CancellationTokenSource cts;
+
 
         //expert data value holders
         private float PenPressure_Expert = 0f;
@@ -178,7 +177,16 @@ namespace CalligraphyTutor.ViewModel
         private float PenPressure_Student = 0f;
         private float Tilt_X_Student = 0f;
         private float Tilt_Y_Student = 0f;
-        private double StrokeVelocity_Student = 0d;
+        private double _studentVelocity = 0d;
+        public double StudentVelocity
+        {
+            get { return StudentVelocity; }
+            set
+            {
+                _studentVelocity = value;
+                RaisePropertyChanged("StudentVelocity");
+            }
+        }
         private double StrokeDeviation_Student = 0d;
 
         #endregion
@@ -191,13 +199,12 @@ namespace CalligraphyTutor.ViewModel
             RecordButtonCommand = new RelayCommand(StartRecordingData);
             ClearButtonCommand = new RelayCommand(ClearStrokes);
             LoadButtonCommand = new RelayCommand(LoadStrokes);
-            StylusDownEventCommand = new RelayCommand<StylusEventArgs>(OnStylusDown);
             StylusUpEventCommand = new RelayCommand<StylusEventArgs>(OnStylusUp);
             StylusMoveEventCommand = new RelayCommand<StylusEventArgs>(OnStylusMoved);
             mySpeechManager = SpeechManager.Instance;
 
             //LogStylusDataPlugin.StylusMoveProcessEnded += LogData_StylusMoveProcessEnded;
-            HitStrokeTesterPlugin.StylusMoveProcessEnded += HitStrokeTesterPlugin_StylusMoveProcessEnded;
+            //HitStrokeTesterPlugin.StylusMoveProcessEnded += HitStrokeTesterPlugin_StylusMoveProcessEnded;
             ExpertInkCanvas.ExpertStrokeLoadedEvent += ExpertInkCanvas_ExpertStrokeLoadedEvent;
         }
 
@@ -245,26 +252,26 @@ namespace CalligraphyTutor.ViewModel
        //         }
        //     }
         //}
-        private void HitStrokeTesterPlugin_StylusMoveProcessEnded(object sender, HitStrokeTesterPlugin.StylusMoveProcessEndedEventArgs e)
-        {
-            //assign the values
-            PenPressure_Expert = e.Pressure * 4;
-            StrokeDeviation_Student = e.Deviation;
-            //Tilt_X_Expert = e.XTilt;
-            //Tilt_Y_Expert = e.YTilt;
-            //send data to learning hub if the student is recording
-            if (this.StudentIsRecording == true)
-            {
-                try
-                {
-                    SendDataAsync();
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("failed sending data: " + ex.StackTrace);
-                }
-            }
-        }
+        //private void HitStrokeTesterPlugin_StylusMoveProcessEnded(object sender, HitStrokeTesterPlugin.StylusMoveProcessEndedEventArgs e)
+        //{
+        //    //assign the values
+        //    PenPressure_Expert = e.Pressure * 4;
+        //    StrokeDeviation_Student = e.Deviation;
+        //    //Tilt_X_Expert = e.XTilt;
+        //    //Tilt_Y_Expert = e.YTilt;
+        //    //send data to learning hub if the student is recording
+        //    if (this.StudentIsRecording == true)
+        //    {
+        //        try
+        //        {
+        //            SendDataAsync();
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            Debug.WriteLine("failed sending data: " + ex.StackTrace);
+        //        }
+        //    }
+        //}
         private void MyConnectorHub_stopRecordingEvent(object sender)
         {
             mySpeechManager.Speech.SpeakAsync("stop recording");
@@ -278,47 +285,37 @@ namespace CalligraphyTutor.ViewModel
         #endregion
 
         #region Icommand Overrides
-        public void OnStylusDown(StylusEventArgs e)
-        {
-            cts = new CancellationTokenSource();
-            Debug.WriteLine("PenDown");
-            //StylusEventArgs args = (StylusEventArgs)param; 
-        }
+
         private void OnStylusUp(StylusEventArgs e)
         {
-            //cancel async task
-            if (cts != null)
-            {
-                cts.Cancel();
-            }
+
             //Debug.WriteLine("PenUp");
             //reset all value when the pen is lifted
             PenPressure_Student = 0f;
             Tilt_X_Student = 0f;
             Tilt_Y_Student = 0f;
-            StrokeVelocity_Student = 0d;
+            StudentVelocity = 0d;
             StrokeDeviation_Student = 0d;
 
         }
+
         /// <summary>
         /// value that holds the last iteration point to calculate the distance. Instantiated 
         /// </summary>
         private Point prevPoint = new Point(double.NegativeInfinity, double.NegativeInfinity);
-        private void OnStylusMoved(Object param)
+        private void OnStylusMoved(StylusEventArgs e)
         {
-            //cast the parameter as stylyus event args
-            StylusEventArgs args = (StylusEventArgs)param;
-            if (((StudentInkCanvas)(args.Source)).SpeedChecked == true && ExpertStrokes.Count !=0)
+            if (((StudentInkCanvas)(e.Source)).SpeedChecked == true && ExpertStrokes.Count !=0)
             {
                 //add a value to the expert average velocity to provide a area of error
-                Stroke ExpertStroke = SelectNearestExpertStroke(new Stroke(args.GetStylusPoints(((StudentInkCanvas)(args.Source)))),ExpertStrokes);
-                //StrokeVelocity_Expert = CalculateAverageExpertStrokeVelocity(ExpertStroke);
+                Stroke ExpertStroke = SelectNearestExpertStroke(new Stroke(e.GetStylusPoints(((StudentInkCanvas)(e.Source)))),ExpertStrokes);
+                StrokeVelocity_Expert = GetExpertStrokeVelocity(ExpertStroke);
                 double ExpertVelocity = StrokeVelocity_Expert + 5;
                 if (SpeedIsChecked == true && ExpertStrokeLoaded == true)
                 {
-                    if (StrokeVelocity_Student > ExpertVelocity + 5)
+                    if (StudentVelocity > ExpertVelocity + 5)
                     {
-                        playSound(cts.Token);
+                        //playSound(cts.Token);
                     }
 
                 }
@@ -349,7 +346,7 @@ namespace CalligraphyTutor.ViewModel
             }
             else
             {
-                Debug.WriteLine("Number of Student Strokes is: " + StudentStrokes.Count);
+                SendDebugMessage("Number of Student Strokes is: " + StudentStrokes.Count);
             }
 
         }
@@ -387,7 +384,7 @@ namespace CalligraphyTutor.ViewModel
         private void SendData()
         {
             List<string> values = new List<string>();
-            values.Add(StrokeVelocity_Student.ToString());
+            values.Add(StudentVelocity.ToString());
             values.Add(PenPressure_Student.ToString());
             values.Add(Tilt_X_Student.ToString());
             values.Add(Tilt_Y_Student.ToString());
@@ -412,7 +409,7 @@ namespace CalligraphyTutor.ViewModel
             tempStrokeCollection = FileManager.Instance.LoadStroke();
             if(tempStrokeCollection==null || tempStrokeCollection.Count == 0)
             {
-                Debug.WriteLine("No Strokes Found");
+                SendDebugMessage("No Strokes Found");
                 return;
             }
             ExpertStrokes = tempStrokeCollection;
@@ -421,7 +418,6 @@ namespace CalligraphyTutor.ViewModel
             //start the timer
             //_studentTimer.Start();
         }
-
         private void StartRecordingData()
         {
             if (this.StudentIsRecording==false)
@@ -546,45 +542,9 @@ namespace CalligraphyTutor.ViewModel
         /// <returns></returns>
         public double CalcualteDistance(Point startingPoint, Point finalPoint)
         {
-            //double distance = Math.Sqrt(Math.Pow(Math.Abs(startingPoint.X - finalPoint.X), 2)
-            //        + Math.Pow(Math.Abs(startingPoint.Y - finalPoint.Y), 2));
             double distance = Point.Subtract(startingPoint, finalPoint).Length;
-            //distanceinmm = distance*(conversion factor from inch to mm)/parts per inch (which is the dot pitch)
-            double distanceInMm = (distance / 267) * 25.4;
-            return distanceInMm;
+            return distance;
         }
 
-
-        #region  Play Sound
-        /// <summary>
-        /// returns the bin folder in the directory
-        /// </summary>
-        //string directory = Environment.CurrentDirectory;
-        //string directory = AppDomain.CurrentDomain.BaseDirectory;
-        string directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-
-        /// <summary>
-        /// variable used to calculate if the sound should be played.
-        /// </summary>
-        DateTime PlayDateTime = DateTime.Now;
-
-        /// <summary>
-        /// play the audio asynchronously. the cancellation token cancells the lined up async task for this method
-        /// </summary>
-        public async void playSound(CancellationToken ct)
-        {
-
-            System.Media.SoundPlayer player = new System.Media.SoundPlayer(directory + @"\sounds\Error.wav");
-            if ((DateTime.Now - PlayDateTime).TotalSeconds > 1.5)
-            {
-                PlayDateTime = DateTime.Now;
-                await Task.Run(() => player.Play());
-                Debug.WriteLine(PlayDateTime);
-
-            }
-
-        }
-
-        #endregion
     }
 }

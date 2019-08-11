@@ -100,13 +100,12 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="CustomInkCanvas\BaseInkCanvas.cs" />
+    <Compile Include="Managers\StrokeAttributesManager.cs" />
     <Compile Include="StylusPlugins\StylusPointsDependencyProperty.cs" />
     <Compile Include="CustomInkCanvas\ExpertInkCanvas.cs" />
-    <Compile Include="CustomStroke\FileManager.cs" />
+    <Compile Include="Model\FileManager.cs" />
     <Compile Include="StylusPlugins\StudentDynamicRenderer.cs" />
     <Compile Include="CustomInkCanvas\StudentInkCanvas.cs" />
-    <Compile Include="CustomStroke\StudentStroke.cs" />
-    <Compile Include="StylusPlugins\HitStrokeTesterPlugin.cs" />
     <Compile Include="StylusPlugins\LogStylusDataPlugin.cs" />
     <Compile Include="ViewModel\ExpertViewModel.cs" />
     <Compile Include="Managers\SpeechManager.cs" />

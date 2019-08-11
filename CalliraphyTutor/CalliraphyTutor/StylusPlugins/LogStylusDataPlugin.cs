@@ -55,7 +55,7 @@ namespace CalligraphyTutor.StylusPlugins
             initStrokeStartPoint = new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
             //store the initial time
             initStrokeStartTime = DateTime.Now;
-            Debug.WriteLine(rawStylusInput.StylusDeviceId);
+            //Debug.WriteLine(rawStylusInput.StylusDeviceId);
         }
 
         protected override void OnStylusMove(RawStylusInput rawStylusInput)

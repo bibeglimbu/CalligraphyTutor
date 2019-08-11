@@ -79,18 +79,6 @@ namespace CalligraphyTutor.CustomInkCanvas
 
         #region Native Methods
         /// <summary>
-        /// Returns the distance between two points in double
-        /// </summary>
-        /// <param name="startingPoint"></param>
-        /// <param name="finalPoint"></param>
-        /// <returns></returns>
-        public double CalcualteDistance(Point startingPoint, Point finalPoint)
-        {
-            double distance = Point.Subtract(startingPoint, finalPoint).Length;
-            return distance;
-        }
-
-        /// <summary>
         /// Set the Drawing Attributes
         /// </summary>
         /// <param name="color"></param>
@@ -101,7 +89,6 @@ namespace CalligraphyTutor.CustomInkCanvas
             myInkDrawingAttributes.Width = size.Width;
             myInkDrawingAttributes.Height = size.Height;
         }
-
 
         /// <summary>
         /// returns the nearest expert strokes as colletion when Pen in range based on hit test with stroke

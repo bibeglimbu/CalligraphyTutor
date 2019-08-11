@@ -52,12 +52,9 @@
             <cic:StudentInkCanvas Height="400" Strokes="{Binding StudentStrokes, Mode=TwoWay}" Background="Transparent"
                 StrokeChecked="{Binding ElementName=StrokeCheckBox, Path=IsChecked, Mode=TwoWay}" 
                 PressureChecked = "{Binding ElementName=PressureCheckBox, Path=IsChecked, Mode=TwoWay}"
-                SpeedChecked = "{Binding ElementName=SpeedCheckBox, Path=IsChecked, Mode=TwoWay}" >
+                SpeedChecked = "{Binding ElementName=SpeedCheckBox, Path=IsChecked, Mode=TwoWay}"
+                                  StudentVelocity="{Binding StudentVelocity, Mode=OneWayToSource}">
                 <i:Interaction.Triggers>
-
-                    <i:EventTrigger EventName="StylusDown">
-                        <mvvm:EventToCommand Command="{Binding StylusDownEventCommand}" PassEventArgsToCommand="True" x:Name="Fix"/>
-                    </i:EventTrigger>
 
                     <i:EventTrigger EventName="StylusUp">
                         <mvvm:EventToCommand Command="{Binding StylusUpEventCommand}" PassEventArgsToCommand="True" />
