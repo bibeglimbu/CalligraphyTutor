@@ -150,10 +150,6 @@ namespace CalligraphyTutor.ViewModel
         /// Audio based feedback
         /// </summary>
         SpeechManager mySpeechManager;
-        /// <summary>
-        /// Instantiation of the learning hub
-        /// </summary>
-        ConnectorHub.ConnectorHub myConnectorHub;
 
 
         //expert data value holders
@@ -202,10 +198,15 @@ namespace CalligraphyTutor.ViewModel
             StylusUpEventCommand = new RelayCommand<StylusEventArgs>(OnStylusUp);
             StylusMoveEventCommand = new RelayCommand<StylusEventArgs>(OnStylusMoved);
             mySpeechManager = SpeechManager.Instance;
-
-            //LogStylusDataPlugin.StylusMoveProcessEnded += LogData_StylusMoveProcessEnded;
-            //HitStrokeTesterPlugin.StylusMoveProcessEnded += HitStrokeTesterPlugin_StylusMoveProcessEnded;
             ExpertInkCanvas.ExpertStrokeLoadedEvent += ExpertInkCanvas_ExpertStrokeLoadedEvent;
+            try
+            {
+                InitLearningHub();
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.Message);
+            }
         }
 
         #region EventDefinition
@@ -325,17 +326,16 @@ namespace CalligraphyTutor.ViewModel
 
         #region Send data
 
-        private async void initLearningHub()
+        private async void InitLearningHub()
         {
             await Task.Run(() =>
             {
-                myConnectorHub = new ConnectorHub.ConnectorHub();
-                myConnectorHub.Init();
-                myConnectorHub.SendReady();
-                myConnectorHub.StartRecordingEvent += MyConnectorHub_startRecordingEvent;
-                myConnectorHub.StopRecordingEvent += MyConnectorHub_stopRecordingEvent;
+                MainWindowViewModel.myConnectorHub.SendReady();
                 SetValueNames();
+                MainWindowViewModel.myConnectorHub.StartRecordingEvent += MyConnectorHub_startRecordingEvent;
+                MainWindowViewModel.myConnectorHub.StopRecordingEvent += MyConnectorHub_stopRecordingEvent;
             });
+
         }
 
         public void SaveStrokes()
@@ -364,7 +364,7 @@ namespace CalligraphyTutor.ViewModel
             names.Add("StrokeDeviation_Student");
             names.Add("PenPressure_Expert");
             //names.Add("StrokeVelocity_Expert");
-            myConnectorHub.SetValuesName(names);
+            MainWindowViewModel.myConnectorHub.SetValuesName(names);
         }
 
         /// <summary>
@@ -383,16 +383,25 @@ namespace CalligraphyTutor.ViewModel
         /// <param name="expertPoint"></param>
         private void SendData()
         {
-            List<string> values = new List<string>();
-            values.Add(StudentVelocity.ToString());
-            values.Add(PenPressure_Student.ToString());
-            values.Add(Tilt_X_Student.ToString());
-            values.Add(Tilt_Y_Student.ToString());
-            values.Add(StrokeDeviation_Student.ToString());
-            values.Add(PenPressure_Expert.ToString());
-            //values.Add(StrokeVelocity_Expert.ToString());
-            myConnectorHub.StoreFrame(values);
-            //mySpeechManager.Speech.SpeakAsync("Student Data sent");
+            try
+            {
+                List<string> values = new List<string>();
+                values.Add(StudentVelocity.ToString());
+                values.Add(PenPressure_Student.ToString());
+                values.Add(Tilt_X_Student.ToString());
+                values.Add(Tilt_Y_Student.ToString());
+                values.Add(StrokeDeviation_Student.ToString());
+                values.Add(PenPressure_Expert.ToString());
+                //values.Add(StrokeVelocity_Expert.ToString());
+                MainWindowViewModel.myConnectorHub.StoreFrame(values);
+                //mySpeechManager.Speech.SpeakAsync("Student Data sent");
+
+            }
+            catch (Exception e)
+            {
+                SendDebugMessage("Sending Message Failed: " + e.Message);
+            }
+
         }
         #endregion
 
@@ -404,7 +413,14 @@ namespace CalligraphyTutor.ViewModel
         private void LoadStrokes()
         {
             //when the stroke is loaded initiate the learning hub. Having it in constructors will not work
-            initLearningHub();
+            try
+            {
+                InitLearningHub();
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.Message);
+            }
             StrokeCollection tempStrokeCollection = new StrokeCollection();
             tempStrokeCollection = FileManager.Instance.LoadStroke();
             if(tempStrokeCollection==null || tempStrokeCollection.Count == 0)

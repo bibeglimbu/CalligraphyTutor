@@ -97,6 +97,10 @@ namespace CalligraphyTutor
         private StudentViewModel studentViewModel;
         public IEnumerable<ViewModelBase> VMCollection;
         private SpeechManager mySpeechManager;
+        /// <summary>
+        /// Instantiation of the learning hub
+        /// </summary>
+        public static ConnectorHub.ConnectorHub myConnectorHub;
         #endregion
 
         #region RelayCommand
@@ -108,7 +112,9 @@ namespace CalligraphyTutor
         public MainWindowViewModel()
         {
             mySpeechManager = SpeechManager.Instance;
-            
+            myConnectorHub = new ConnectorHub.ConnectorHub();
+            myConnectorHub.Init();
+
             VMCollection = new ViewModelBase[]
             {
                 expertViewModel, studentViewModel
@@ -119,6 +125,7 @@ namespace CalligraphyTutor
             StudentButtonCommand = new RelayCommand(() => OnNav("Student"), false);
             CloseButtonCommand = new RelayCommand(() => CloseApplication(), false);
             MessengerInstance.Register<string>(this,"DebugMessage",(debug => SetDebugText(debug)));
+
         }
  
         #region Native Methods

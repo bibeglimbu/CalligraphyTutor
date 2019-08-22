@@ -13,6 +13,7 @@ using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using CalligraphyTutor.CustomInkCanvas;
 using CalligraphyTutor.Managers;
+using System.Windows.Threading;
 
 namespace CalligraphyTutor.ViewModel
 {
@@ -124,8 +125,8 @@ namespace CalligraphyTutor.ViewModel
         /// <summary>
         /// holds state if the recroding button is clicked or not
         /// </summary>
-        private bool IsRecording = false;
-        private ConnectorHub.ConnectorHub myConnectorHub;
+        public bool IsRecording = false;
+
         #endregion
 
         #region ReplayCommand
@@ -152,7 +153,15 @@ namespace CalligraphyTutor.ViewModel
             StylusUpEventCommand = new RelayCommand<StylusEventArgs>(OnStylusUp);
             RecordButtonCommand = new RelayCommand(StartRecordingData);
             ClearButtonCommand = new RelayCommand(ClearStrokes);
-            InitLearningHub();
+            try
+            {
+                InitLearningHub();
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.Message);
+            }
+            
         }
 
         #region Methods called by the buttons
@@ -204,7 +213,7 @@ namespace CalligraphyTutor.ViewModel
                         Tilt_X = sp.GetPropertyValue(StylusPointProperties.XTiltOrientation);
                         Tilt_Y = sp.GetPropertyValue(StylusPointProperties.YTiltOrientation);
                         StrokeVelocity = 0d;
-                        //SendDataAsync();
+                        SendDataAsync();
                     }
                 });
 
@@ -214,14 +223,20 @@ namespace CalligraphyTutor.ViewModel
 
         private void MyConnectorHub_stopRecordingEvent(object sender)
         {
-            //SendDebug("stop");
-            StartRecordingData();
+            Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(
+                        () =>
+                        {
+                            StartRecordingData();
+                        }));
         }
 
         private void MyConnectorHub_startRecordingEvent(object sender)
         {
-            //SendDebug("start");
-            StartRecordingData();
+            Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(
+                        () =>
+                        {
+                            StartRecordingData();
+                        }));
         }
         #endregion
 
@@ -238,42 +253,29 @@ namespace CalligraphyTutor.ViewModel
         /// <summary>
         /// Called when recording is started
         /// </summary>
-        private void StartRecordingData()
+        public void StartRecordingData()
         {
             //SendDebug(RecordButtonName.ToString());
-            if (IsRecording.Equals(false))
+            if (IsRecording == false)
             {
-
-                Application.Current.Dispatcher.InvokeAsync(new Action(
-                    () =>
-                    {
-                        IsRecording = true;
-                        RecordButtonName = "Stop Recording";
+                IsRecording = true;
+                RecordButtonName = "Stop Recording";
                         RecordButtonColor = new SolidColorBrush(Colors.LightGreen);
                         ClearStrokes();
-                    }));
-                if (mySpeechManager.Speech.State != SynthesizerState.Speaking)
-                {
-                    mySpeechManager.Speech.SpeakAsync("Expert Is recording" + IsRecording.ToString());
-                }
-
+                        
             }
-            else
+            else if (IsRecording == true)
             {
-                Application.Current.Dispatcher.InvokeAsync(new Action(
-                    () =>
-                    {
-                        SaveStrokes();
-                        IsRecording = false;
+                IsRecording = false;
+                SaveStrokes();
                         RecordButtonName = "Start Recording";
                         RecordButtonColor = new SolidColorBrush(Colors.White);
                         ClearStrokes();
-                    }));
-                if (mySpeechManager.Speech.State != SynthesizerState.Speaking)
-                {
-                    mySpeechManager.Speech.SpeakAsync("Expert Is recording" + IsRecording.ToString());
-                }
-
+                        
+            }
+            if (mySpeechManager.Speech.State != SynthesizerState.Speaking)
+            {
+                mySpeechManager.Speech.SpeakAsync("Expert Is recording" + this.IsRecording.ToString());
             }
         }
 
@@ -286,13 +288,12 @@ namespace CalligraphyTutor.ViewModel
         private async void InitLearningHub()
         {
             await Task.Run(() => {
-                myConnectorHub = new ConnectorHub.ConnectorHub();
-                myConnectorHub.Init();
-                myConnectorHub.SendReady();
-                myConnectorHub.StartRecordingEvent += MyConnectorHub_startRecordingEvent;
-                myConnectorHub.StopRecordingEvent += MyConnectorHub_stopRecordingEvent;
+                MainWindowViewModel.myConnectorHub.SendReady();
                 SetValueNames();
+                MainWindowViewModel.myConnectorHub.StartRecordingEvent += MyConnectorHub_startRecordingEvent;
+                MainWindowViewModel.myConnectorHub.StopRecordingEvent += MyConnectorHub_stopRecordingEvent;
             });
+
         }
 
         /// <summary>
@@ -305,7 +306,7 @@ namespace CalligraphyTutor.ViewModel
             names.Add("PenPressure");
             names.Add("Tilt_X");
             names.Add("Tilt_Y");
-            myConnectorHub.SetValuesName(names);
+            MainWindowViewModel.myConnectorHub.SetValuesName(names);
 
         }
 
@@ -332,11 +333,12 @@ namespace CalligraphyTutor.ViewModel
                 values.Add(PenPressure.ToString());
                 values.Add(Tilt_X.ToString());
                 values.Add(Tilt_Y.ToString());
-                myConnectorHub.StoreFrame(values);
+                MainWindowViewModel.myConnectorHub.StoreFrame(values);
+                
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e.StackTrace);
+                SendDebugMessage("Sending Message Failed: "+e.Message);
             }
 
         }
