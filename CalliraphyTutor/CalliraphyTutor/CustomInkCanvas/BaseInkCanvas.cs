@@ -105,7 +105,7 @@ namespace CalligraphyTutor.CustomInkCanvas
                 //check which strokes the current stylus point is hitting with a extended triangle to animate those strokes
                 foreach (Stroke es in Strokes)
                 {
-                    if (es.HitTest(StylusPoint, 50d))
+                    if (es.HitTest(StylusPoint, 100d))
                     {
                         sc.Add(es);
 

@@ -8,7 +8,8 @@
              xmlns:cic="clr-namespace:CalligraphyTutor.CustomInkCanvas"
              xmlns:mvvm="clr-namespace:GalaSoft.MvvmLight.Command;assembly=GalaSoft.MvvmLight.Platform"
              mc:Ignorable="d" 
-             DataContext="{StaticResource StudentViewModel}">
+             >
+    <!--DataContext="{StaticResource StudentViewModel}"-->
     <Grid Background="#7ec0ee" Name="MainGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="0.4*"/>
@@ -61,7 +62,7 @@
                     </i:EventTrigger>
 
                     <i:EventTrigger EventName="StylusMove">
-                        <mvvm:EventToCommand Command="{Binding StylusMovedEventCommand}" PassEventArgsToCommand="True" />
+                        <mvvm:EventToCommand Command="{Binding StylusMoveEventCommand}" PassEventArgsToCommand="True" />
                     </i:EventTrigger>
 
                 </i:Interaction.Triggers>

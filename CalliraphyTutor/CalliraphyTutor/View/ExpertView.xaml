@@ -8,10 +8,10 @@
              xmlns:i="clr-namespace:System.Windows.Interactivity;assembly=System.Windows.Interactivity"
              xmlns:cic="clr-namespace:CalligraphyTutor.CustomInkCanvas"
              xmlns:mvvm="clr-namespace:GalaSoft.MvvmLight.Command;assembly=GalaSoft.MvvmLight.Platform"
-             DataContext="{StaticResource ExpertViewModel}"
+             
              Name="ExpertViewControl">
     <!-- MVVM light uses the system.windows.interactivity for  which should be clearly placed instead of the i  -->
-
+    <!--DataContext="{StaticResource ExpertViewModel}"-->
     <Grid Background="#7ec0ee">
         <Grid.RowDefinitions>
             <RowDefinition Height="0.4*"/>

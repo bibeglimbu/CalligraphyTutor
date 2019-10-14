@@ -125,12 +125,12 @@ namespace CalligraphyTutor.ViewModel
         /// <summary>
         /// holds state if the recroding button is clicked or not
         /// </summary>
-        public bool IsRecording = false;
+        public bool ExpertIsRecording = false;
 
         #endregion
 
         #region ReplayCommand
-        public RelayCommand<StylusEventArgs> StylusMovedEventCommand { get; set; }
+        public RelayCommand<StylusEventArgs> StylusMoveEventCommand { get; set; }
         public RelayCommand<StylusEventArgs> StylusUpEventCommand { get; set; }
         public RelayCommand RecordButtonCommand { get; set; }
         public RelayCommand ClearButtonCommand { get; set; }
@@ -141,7 +141,9 @@ namespace CalligraphyTutor.ViewModel
         private float PenPressure = 0f;
         private float Tilt_X = 0f;
         private float Tilt_Y = 0f;
-        private double StrokeVelocity = 0d;
+        private double Pos_X = 0d;
+        private double Pos_Y = 0d;
+        //private double StrokeVelocity = 0d;
         #endregion
 
         /// <summary>
@@ -149,7 +151,7 @@ namespace CalligraphyTutor.ViewModel
         /// </summary>
         public ExpertViewModel()
         {
-            StylusMovedEventCommand = new RelayCommand<StylusEventArgs>(OnStylusMoved);
+            StylusMoveEventCommand = new RelayCommand<StylusEventArgs>(OnStylusMoved);
             StylusUpEventCommand = new RelayCommand<StylusEventArgs>(OnStylusUp);
             RecordButtonCommand = new RelayCommand(StartRecordingData);
             ClearButtonCommand = new RelayCommand(ClearStrokes);
@@ -194,7 +196,7 @@ namespace CalligraphyTutor.ViewModel
             PenPressure = 0f;
             Tilt_X = 0f;
             Tilt_Y = 0f;
-            StrokeVelocity = 0d;
+            //StrokeVelocity = 0d;
     }
         public void OnStylusMoved(StylusEventArgs e)
         {
@@ -204,7 +206,7 @@ namespace CalligraphyTutor.ViewModel
                 SendDebugMessage("No StylusPoints");
                 return;
             }
-            if (IsRecording == true)
+            if (ExpertIsRecording == true)
             {
                 Task.Run(() => {
                     foreach (StylusPoint sp in strokePoints)
@@ -212,7 +214,9 @@ namespace CalligraphyTutor.ViewModel
                         PenPressure = sp.GetPropertyValue(StylusPointProperties.NormalPressure);
                         Tilt_X = sp.GetPropertyValue(StylusPointProperties.XTiltOrientation);
                         Tilt_Y = sp.GetPropertyValue(StylusPointProperties.YTiltOrientation);
-                        StrokeVelocity = 0d;
+                        Pos_X = sp.GetPropertyValue(StylusPointProperties.X);
+                        Pos_Y = sp.GetPropertyValue(StylusPointProperties.Y);
+                        //StrokeVelocity = 0d;
                         SendDataAsync();
                     }
                 });
@@ -226,7 +230,7 @@ namespace CalligraphyTutor.ViewModel
             Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(
                         () =>
                         {
-                            StartRecordingData();
+                            StopRecordingData();
                         }));
         }
 
@@ -253,29 +257,36 @@ namespace CalligraphyTutor.ViewModel
         /// <summary>
         /// Called when recording is started
         /// </summary>
-        public void StartRecordingData()
+        private void StartRecordingData()
         {
             //SendDebug(RecordButtonName.ToString());
-            if (IsRecording == false)
+            if (ExpertIsRecording == false)
             {
-                IsRecording = true;
+                ExpertIsRecording = true;
                 RecordButtonName = "Stop Recording";
-                        RecordButtonColor = new SolidColorBrush(Colors.LightGreen);
-                        ClearStrokes();
-                        
-            }
-            else if (IsRecording == true)
-            {
-                IsRecording = false;
-                SaveStrokes();
-                        RecordButtonName = "Start Recording";
-                        RecordButtonColor = new SolidColorBrush(Colors.White);
-                        ClearStrokes();
-                        
+                RecordButtonColor = new SolidColorBrush(Colors.LightGreen);
+                ClearStrokes();   
             }
             if (mySpeechManager.Speech.State != SynthesizerState.Speaking)
             {
-                mySpeechManager.Speech.SpeakAsync("Expert Is recording" + this.IsRecording.ToString());
+                mySpeechManager.Speech.SpeakAsync("Expert Is recording" + this.ExpertIsRecording.ToString());
+            }
+
+        }
+
+        private void StopRecordingData()
+        {
+            if (ExpertIsRecording == true)
+            {
+                ExpertIsRecording = false;
+                SaveStrokes();
+                RecordButtonName = "Start Recording";
+                RecordButtonColor = new SolidColorBrush(Colors.White);
+                ClearStrokes();
+            }
+            if (mySpeechManager.Speech.State != SynthesizerState.Speaking)
+            {
+                mySpeechManager.Speech.SpeakAsync("Expert Is recording" + this.ExpertIsRecording.ToString());
             }
         }
 
@@ -285,15 +296,11 @@ namespace CalligraphyTutor.ViewModel
         /// <summary>
         /// initializes the learning hub
         /// </summary>
-        private async void InitLearningHub()
+        private  void InitLearningHub()
         {
-            await Task.Run(() => {
-                MainWindowViewModel.myConnectorHub.SendReady();
                 SetValueNames();
                 MainWindowViewModel.myConnectorHub.StartRecordingEvent += MyConnectorHub_startRecordingEvent;
                 MainWindowViewModel.myConnectorHub.StopRecordingEvent += MyConnectorHub_stopRecordingEvent;
-            });
-
         }
 
         /// <summary>
@@ -302,10 +309,12 @@ namespace CalligraphyTutor.ViewModel
         private void SetValueNames()
         {
             List<string> names = new List<string>();
-            names.Add("StrokeVelocity");
+            //names.Add("StrokeVelocity");
             names.Add("PenPressure");
             names.Add("Tilt_X");
             names.Add("Tilt_Y");
+            names.Add("Pos_X");
+            names.Add("Pos_Y");
             MainWindowViewModel.myConnectorHub.SetValuesName(names);
 
         }
@@ -329,10 +338,12 @@ namespace CalligraphyTutor.ViewModel
             try
             {
                 List<string> values = new List<string>();
-                values.Add(StrokeVelocity.ToString());
+                //values.Add(StrokeVelocity.ToString());
                 values.Add(PenPressure.ToString());
                 values.Add(Tilt_X.ToString());
                 values.Add(Tilt_Y.ToString());
+                values.Add(Pos_X.ToString());
+                values.Add(Pos_Y.ToString());
                 MainWindowViewModel.myConnectorHub.StoreFrame(values);
                 
             }
