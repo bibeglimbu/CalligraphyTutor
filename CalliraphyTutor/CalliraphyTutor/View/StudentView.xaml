@@ -47,7 +47,8 @@
               X1="0" X2="{Binding ScreenWidth}" >
             </Line>
 
-            <cic:ExpertInkCanvas Height="400" DisplayAnimation="True" Strokes="{Binding ExpertStrokes}" EditingMode="None"  Background="Transparent" >
+            <cic:ExpertInkCanvas Height="400" DisplayAnimation="True" Strokes="{Binding ExpertStrokes}" EditingMode="None"  Background="Transparent" 
+                                 StudentStrokes="{Binding StudentStrokeCount, Mode=TwoWay}">
             </cic:ExpertInkCanvas>
 
             <cic:StudentInkCanvas Height="400" Strokes="{Binding StudentStrokes, Mode=TwoWay}" Background="Transparent"

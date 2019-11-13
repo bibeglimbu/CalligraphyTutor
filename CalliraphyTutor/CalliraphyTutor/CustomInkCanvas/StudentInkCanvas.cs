@@ -186,16 +186,16 @@ namespace CalligraphyTutor.CustomInkCanvas
         /// Event raised when the pen is lifed or put down. declared it as static as the listening class would only listen to the object.
         /// thid event is subscribed by the expert inkcanvas and stops the animation
         /// </summary>
-        public static event EventHandler<PenDownUpEventEventArgs> PenDownUpEvent;
-        protected virtual void OnPenDownUpEvent(PenDownUpEventEventArgs e)
+        public static event EventHandler<PenOutOfRangeEventArgs> PenOutOfRangeEvent;
+        protected virtual void OnPenOutOfRangeEvent(PenOutOfRangeEventArgs e)
         {
-            EventHandler<PenDownUpEventEventArgs> handler = PenDownUpEvent;
+            EventHandler<PenOutOfRangeEventArgs> handler = PenOutOfRangeEvent;
             if (handler != null)
             {
                 handler(this, e);
             }
         }
-        public class PenDownUpEventEventArgs : EventArgs
+        public class PenOutOfRangeEventArgs : EventArgs
         {
             public bool IsPenDown { get; set; }
         }
@@ -291,9 +291,9 @@ namespace CalligraphyTutor.CustomInkCanvas
             //Add the initial time for the event
             myStrokeAttManager.StrokeTime.Add(e.Timestamp);
             //raise an event to let expert inkcanvas know that the pen is down
-            PenDownUpEventEventArgs args = new PenDownUpEventEventArgs();
-            args.IsPenDown = true;
-            OnPenDownUpEvent(args);
+            //PenDownUpEventEventArgs args = new PenDownUpEventEventArgs();
+            //args.IsPenDown = true;
+            //OnPenDownUpEvent(args);
             base.OnStylusDown(e);
         }
 
@@ -304,10 +304,6 @@ namespace CalligraphyTutor.CustomInkCanvas
             {
                 cts.Cancel();
             }
-            //raise an event to let expert inkcanvas know that the pen is up
-            PenDownUpEventEventArgs args = new PenDownUpEventEventArgs();
-            args.IsPenDown = false;
-            OnPenDownUpEvent(args);
             //reset the prevSPPoint
             //prevSPPoint = new StylusPoint(double.NegativeInfinity, double.NegativeInfinity);
             base.OnStylusUp(e);
@@ -319,6 +315,15 @@ namespace CalligraphyTutor.CustomInkCanvas
             args.Stylus_Point = e.GetPosition((InkCanvas)e.Source);
             OnPenInRangeEvent(args);
             base.OnStylusInRange(e);
+        }
+
+        protected override void OnStylusOutOfRange(StylusEventArgs e)
+        {
+            //raise an event to let expert inkcanvas know that the pen is up
+            PenOutOfRangeEventArgs args = new PenOutOfRangeEventArgs();
+            //args.IsPenDown = false;
+            OnPenOutOfRangeEvent(args);
+            base.OnStylusOutOfRange(e);
         }
 
         /// <summary>
@@ -407,7 +412,7 @@ namespace CalligraphyTutor.CustomInkCanvas
                 double  tempVelocity = myStrokeAttManager.CalculateVelocity(s);
                 if(tempVelocity <=0 || Double.IsInfinity(tempVelocity) || Double.IsNaN(tempVelocity))
                 {
-                    Debug.WriteLine("StudentVelocity Invalid Value: " + tempVelocity + System.Environment.NewLine);
+                    Debug.WriteLine("StudentStrokeCount Invalid Value: " + tempVelocity + System.Environment.NewLine);
                     return;
                 }
 

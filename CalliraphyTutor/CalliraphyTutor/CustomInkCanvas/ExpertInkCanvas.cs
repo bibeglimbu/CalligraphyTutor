@@ -18,6 +18,29 @@ namespace CalligraphyTutor.CustomInkCanvas
     class ExpertInkCanvas : BaseInkCanvas
     {
         #region Variables
+
+        /// <summary>
+        /// Dependency property for binding the Number of student strokes from view model
+        /// </summary>
+        public static DependencyProperty StudentStrokeCountProperty = DependencyProperty.Register("StudentStrokes", typeof(int), typeof(ExpertInkCanvas),
+            new FrameworkPropertyMetadata(default(int), new PropertyChangedCallback(OnStudentStrokeCountChanged)));
+        private static void OnStudentStrokeCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            Debug.WriteLine("StudentStrokeCount ExpertIC" + ((int)e.NewValue).ToString()) ;
+            ((ExpertInkCanvas)d).StudentStrokes = (int)e.NewValue;
+        }
+        /// <summary>
+        /// Number of Strokes in the student
+        /// </summary>
+        public int StudentStrokes
+        {
+            get { return (int)GetValue(StudentStrokeCountProperty); }
+            set
+            {
+                SetValue(StudentStrokeCountProperty, value);
+            }
+        }
+
         /// <summary>
         /// Timer for animation
         /// </summary>
@@ -89,8 +112,8 @@ namespace CalligraphyTutor.CustomInkCanvas
         {
             _dispatchTimer.Interval = new TimeSpan(10000);
             _dispatchTimer.Tick += _dispatchTimer_Tick;
-
-            StudentInkCanvas.PenDownUpEvent += StudentInkCanvas_PenDownUpEvent;
+            _dispatchTimer.Start();
+            StudentInkCanvas.PenOutOfRangeEvent += StudentInkCanvas_PenOutOfRangeEvent;
             StudentInkCanvas.PenInRangeEvent += StudentInkCanvas_PenInRangeEvent;
             myStrokeAttManager = new StrokeAttributesManager();
         }
@@ -98,55 +121,42 @@ namespace CalligraphyTutor.CustomInkCanvas
         #region EventHandlers
         private void StudentInkCanvas_PenInRangeEvent(object sender, StudentInkCanvas.PenInRangeEventEventArgs e)
         {
+            IsStylusDown = true;
+            //reset the animation variables
+            ResetAnimation();
+            //set the animation playing to false as the thread can be terminsated in the middle and it can still be true even when no animation is running
+            AnimationPlaying = false;
+
+        }
+
+        private void StudentInkCanvas_PenOutOfRangeEvent(object sender, StudentInkCanvas.PenOutOfRangeEventArgs e)
+        {
+            IsStylusDown = false;
             //start the animation when this event is detected
             if (AnimationPlaying == false)
             {
-                ref_Stylus_Point = e.Stylus_Point;
                 //set the IsStylusInrange to true
                 _dispatchTimer.Start();
             }
         }
 
-        private void StudentInkCanvas_PenDownUpEvent(object sender, StudentInkCanvas.PenDownUpEventEventArgs e)
-        {
-            IsStylusDown = e.IsPenDown;
-            //reset the animation variables
-            ResetAnimation();
-            //set the animation playing to false as the thread can be terminsated in the middle and it can still be true even when no animation is running
-            AnimationPlaying = false;
-        }
-
-        /// <summary>
-        /// Reference point to update the collection of animation for animation. passes the point of the top of the pen
-        /// </summary>
-        public Point ref_Stylus_Point;
         private void _dispatchTimer_Tick(object sender, EventArgs e)
         {
-            //if the user has not requested any animation
-            if(DisplayAnimation == false)
+            //if the user has not requested any animation, is writing or there no expert strokes loaded
+            if(DisplayAnimation == false || IsStylusDown == true || this.Strokes.Count ==0)
             {
                 return;
             }
-            //return if the IsStylus is down which stops the animation immediately as we donot want to distract the write
-            if(IsStylusDown == true)
-            {
-                return;
-            }
-            //reutn if there is no refernce point
-            if(ref_Stylus_Point==null)
-            {
-                return;
-            }
-            StrokeCollection sc = base.ReturnNearestExpertStrokes(ref_Stylus_Point);
-            //if no points were returned
-            if (sc.Count == 0)
-                {
-                    return;
-                }
+
             //play the animation
-            //GetTimestamp(sc.Last());
+            //GetTimestamp(stroke.Last());
             Application.Current.Dispatcher.InvokeAsync(new Action( () =>
             {
+                if (StudentStrokes<0||StudentStrokes>this.Strokes.Count)
+                {
+                    StudentStrokes = 0;
+                }
+                Stroke sc = this.Strokes[StudentStrokes];
                 DisplayStrokesPatterns(sc);
             }));
         }
@@ -180,10 +190,6 @@ namespace CalligraphyTutor.CustomInkCanvas
 
         protected override void OnStylusDown(StylusDownEventArgs e)
         {
-            //reset the animation variables
-            ResetAnimation();
-            //set the animation playing to false as the thread can be terminsated in the middle and it can still be true even when no animation is running
-            AnimationPlaying = false;
             //add styluspoint from the event after checking to ensure that the collection doesnt already posses them
             myStrokeAttManager.StrokeTime.Add(e.Timestamp);
             Debug.WriteLine("TimeTaken_PenDown:" + e.Timestamp);
@@ -196,33 +202,6 @@ namespace CalligraphyTutor.CustomInkCanvas
             myStrokeAttManager.StrokeTime.Add(e.Timestamp);
             Debug.WriteLine("TimeTaken_StylusUp:" + e.Timestamp);
             base.OnStylusMove(e);
-        }
-
-        protected override void OnStylusInRange(StylusEventArgs e)
-        {
-            //If the stylus has left the digitizer and returned and no animation is being played
-            if (AnimationPlaying == false)
-            {
-                ref_Stylus_Point = e.GetPosition((InkCanvas)e.Source);
-                //set the IsStylusInrange to true
-                _dispatchTimer.Start();
-            }
-            //Debug.WriteLine("InRange: displayAnimatin +" + DisplayAnimation.ToString());
-            base.OnStylusInRange(e);
-        }
-
-        protected override void OnStylusOutOfRange(StylusEventArgs e)
-        {
-            
-            //if the stylus is out of range and no animation is playing currently
-            if (AnimationPlaying == false)
-            {
-                //set StylusInRange to false
-                ResetAnimation();
-            }
-
-            //Debug.WriteLine("OutOfRange: displayAnimatin +" + DisplayAnimation.ToString());
-            base.OnStylusLeave(e);
         }
 
         protected override void OnStrokeCollected(InkCanvasStrokeCollectedEventArgs e)
@@ -260,8 +239,8 @@ namespace CalligraphyTutor.CustomInkCanvas
         /// <summary>
         /// Indicates the way in which the pattern was drawn by means of animation
         /// </summary>
-        /// <param name="inkCanvas"></param>
-        private void DisplayStrokesPatterns(StrokeCollection sc)
+        /// <param name="stroke">The Collection of Expert Strokes</param>
+        private void DisplayStrokesPatterns(Stroke stroke)
         {
             //if its the first run remember the default number of  children and set AnimationPlaying to true;
             if (globalInitialChildCount < 0)
@@ -273,20 +252,20 @@ namespace CalligraphyTutor.CustomInkCanvas
             }
 
             //create a single large stroke collecting all the styluspoint collection
-            StylusPointCollection spc = new StylusPointCollection();
-            for (int i = 0; i < sc.Count; i++)
-            {
-                spc.Add(sc[i].StylusPoints);
-            }
-            Stroke s = new Stroke(spc);
+            //StylusPointCollection spc = new StylusPointCollection();
+            //for (int i = 0; i < stroke.Count; i++)
+            //{
+            //    spc.Add(stroke[i].StylusPoints);
+            //}
+            //Stroke s = new Stroke(spc);
             //if the animation frame of animation is less than the count of stylus points and the number of ellipses
-            if (animationCurrentFrame < s.StylusPoints.Count + maxEllipses)
+            if (animationCurrentFrame < stroke.StylusPoints.Count + maxEllipses)
             {
                 //if the animation frame is less than the number of children
-                if (animationCurrentFrame < s.StylusPoints.Count - 1)
+                if (animationCurrentFrame < stroke.StylusPoints.Count - 1)
                 {
                     //get the styluspoint location according to the frame
-                    Point p = s.StylusPoints[animationCurrentFrame].ToPoint();
+                    Point p = stroke.StylusPoints[animationCurrentFrame].ToPoint();
                     //add the point to the EllipseChildHolder
                     ChildEllipsePointHolder.Add(p);
                     //draw an ellipse in that point
@@ -358,7 +337,7 @@ namespace CalligraphyTutor.CustomInkCanvas
             animationCurrentFrame = 0;
             ChildEllipseHolder.Clear();
             ChildEllipsePointHolder.Clear();
-            _dispatchTimer.Stop();
+            //_dispatchTimer.Stop();
         }
 
 

@@ -349,7 +349,7 @@ namespace CalligraphyTutor.ViewModel
             }
             catch (Exception e)
             {
-                SendDebugMessage("Sending Message Failed: "+e.Message);
+                //SendDebugMessage("Sending Message Failed: "+e.Message);
             }
 
         }

@@ -138,6 +138,16 @@ namespace CalligraphyTutor.ViewModel
                 RaisePropertyChanged("IsStylusDown");
             }
         }
+        private int _studentStrokeCount = 0;
+        public int StudentStrokeCount
+        {
+            get { return _studentStrokeCount; }
+            set
+            {
+                _studentStrokeCount = value;
+                RaisePropertyChanged("StudentStrokeCount");
+            }
+        }
         #endregion
 
         #region Instantiations
@@ -163,9 +173,10 @@ namespace CalligraphyTutor.ViewModel
         public RelayCommand RecordButtonCommand { get; set; }
         public RelayCommand ClearButtonCommand { get; set; }
         public RelayCommand LoadButtonCommand { get; set; }
-        public RelayCommand<StylusEventArgs> StylusDownEventCommand { get; set; }
+        //public RelayCommand<StylusEventArgs> StylusDownEventCommand { get; set; }
         public RelayCommand<StylusEventArgs> StylusUpEventCommand { get; set; }
         public RelayCommand<StylusEventArgs> StylusMoveEventCommand { get; set; }
+        public RelayCommand<InkCanvasStrokeCollectedEventArgs> StrokeCollectedEventCommand { get; set; }
         #endregion
 
         #region send data
@@ -200,6 +211,7 @@ namespace CalligraphyTutor.ViewModel
             LoadButtonCommand = new RelayCommand(LoadStrokes);
             StylusUpEventCommand = new RelayCommand<StylusEventArgs>(OnStylusUp);
             StylusMoveEventCommand = new RelayCommand<StylusEventArgs>(OnStylusMoved);
+            StrokeCollectedEventCommand = new RelayCommand<InkCanvasStrokeCollectedEventArgs>(OnStrokeCollected);
             mySpeechManager = SpeechManager.Instance;
             ExpertInkCanvas.ExpertStrokeLoadedEvent += ExpertInkCanvas_ExpertStrokeLoadedEvent;
             try
@@ -260,7 +272,7 @@ namespace CalligraphyTutor.ViewModel
 
         public void OnStylusUp(StylusEventArgs e)
         {
-
+            StudentStrokeCount = StudentStrokes.Count;
             //Debug.WriteLine("PenUp");
             //reset all value when the pen is lifted
             PenPressure = 0f;
@@ -306,13 +318,19 @@ namespace CalligraphyTutor.ViewModel
             //    double ExpertVelocity = StrokeVelocity_Expert + 5;
             //    if (SpeedIsChecked == true && ExpertStrokeLoaded == true)
             //    {
-            //        if (StudentVelocity > ExpertVelocity + 5)
+            //        if (StudentStrokeCount > ExpertVelocity + 5)
             //        {
             //            //playSound(cts.Token);
             //        }
 
             //    }
             //}
+        }
+
+        public void OnStrokeCollected(InkCanvasStrokeCollectedEventArgs e)
+        {
+            Debug.WriteLine("Stroke Collected");
+            StudentStrokeCount = StudentStrokes.Count;
         }
         #endregion
 
@@ -353,7 +371,7 @@ namespace CalligraphyTutor.ViewModel
             //names.Add("StrokeDeviation");
             //names.Add("PenPressure_Expert");
             //names.Add("StrokeVelocity_Expert");
-            MainWindowViewModel.myConnectorHub.SetValuesName(names);
+            //MainWindowViewModel.myConnectorHub.SetValuesName(names);
         }
 
         /// <summary>
@@ -375,7 +393,7 @@ namespace CalligraphyTutor.ViewModel
             try
             {
                 List<string> values = new List<string>();
-                //values.Add(StudentVelocity.ToString());
+                //values.Add(StudentStrokeCount.ToString());
                 values.Add(PenPressure.ToString());
                 values.Add(Tilt_X.ToString());
                 values.Add(Tilt_Y.ToString());
@@ -384,13 +402,13 @@ namespace CalligraphyTutor.ViewModel
                 //values.Add(StrokeDeviation.ToString());
                 //values.Add(PenPressure_Expert.ToString());
                 //values.Add(StrokeVelocity_Expert.ToString());
-                MainWindowViewModel.myConnectorHub.StoreFrame(values);
+                //MainWindowViewModel.myConnectorHub.StoreFrame(values);
                 //mySpeechManager.Speech.SpeakAsync("Student Data sent");
 
             }
             catch (Exception e)
             {
-                SendDebugMessage("Sending Message Failed: " + e.Message);
+                //SendDebugMessage("Sending Message Failed: " + e.Message);
             }
 
         }
