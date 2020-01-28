@@ -28,8 +28,51 @@ namespace CalligraphyTutor.ViewModel
 {
     public class StudentViewModel: ViewModelBase
     {
-        #region Vars & properties
+        #region Binding
+        private bool speedIsChecked = true;
+        public bool SpeedIsChecked
+        {
+            get { return speedIsChecked; }
+            set
+            {
+                speedIsChecked = value;
+                RaisePropertyChanged("SpeedIsChecked");
+            }
+        }
+        private bool pressureIsChecked = true;
+        public bool PressureIsChecked
+        {
+            get { return pressureIsChecked; }
+            set
+            {
+                pressureIsChecked = value;
+                RaisePropertyChanged("PressureIsChecked");
+            }
+        }
+        private bool strokeIsChecked = true;
+        public bool StrokeIsChecked
+        {
+            get { return strokeIsChecked; }
+            set
+            {
+                strokeIsChecked = value;
+                RaisePropertyChanged("StrokeIsChecked");
+            }
+        }
+        private bool _isStylusInRange = false;
+        private int _studentStrokeCount = 0;
+        public int StudentStrokeCount
+        {
+            get { return _studentStrokeCount; }
+            set
+            {
+                _studentStrokeCount = value;
+                RaisePropertyChanged("StudentStrokeCount");
+            }
+        }
+        #endregion Binding
 
+        #region Properties
         //Helps set the screen size of the application in the view
         private int _screenWidth = (int)SystemParameters.PrimaryScreenWidth;
         public int ScreenWidth
@@ -41,7 +84,6 @@ namespace CalligraphyTutor.ViewModel
                 RaisePropertyChanged("ScreenWidth");
             }
         }
-        
         private string _recordButtonName = "Start Recording";
         /// <summary>
         /// Text to be displayed on the dynamic button
@@ -96,71 +138,18 @@ namespace CalligraphyTutor.ViewModel
                 RaisePropertyChanged("ExpertStrokes");
             }
         }
-
-        private bool speedIsChecked = true;
-        public bool SpeedIsChecked
-        {
-            get { return speedIsChecked; }
-            set
-            {
-                speedIsChecked = value;
-                RaisePropertyChanged("SpeedIsChecked");
-            }
-        }
-        private bool pressureIsChecked = true;
-        public bool PressureIsChecked
-        {
-            get { return pressureIsChecked; }
-            set
-            {
-                pressureIsChecked = value;
-                RaisePropertyChanged("PressureIsChecked");
-            }
-        }
-        private bool strokeIsChecked = true;
-        public bool StrokeIsChecked
-        {
-            get { return strokeIsChecked; }
-            set
-            {
-                strokeIsChecked = value;
-                RaisePropertyChanged("StrokeIsChecked");
-            }
-        }
-
-        private bool _isStylusDown = false;
-        public bool IsStylusDown
-        {
-            get { return _isStylusDown; }
-            set
-            {
-                _isStylusDown = value;
-                RaisePropertyChanged("IsStylusDown");
-            }
-        }
-        private int _studentStrokeCount = 0;
-        public int StudentStrokeCount
-        {
-            get { return _studentStrokeCount; }
-            set
-            {
-                _studentStrokeCount = value;
-                RaisePropertyChanged("StudentStrokeCount");
-            }
-        }
+        /// <summary>
+        /// Audio based feedback
+        /// </summary>
+        public SpeechManager mySpeechManager;
         #endregion
 
-        #region Instantiations
+        #region Learning Hub
         /// <summary>
         /// Indicates if the data is being sent to the Learning hub.
         /// </summary>
         public bool StudentIsRecording = false;
         public bool ExpertStrokeLoaded = false;
-        /// <summary>
-        /// Audio based feedback
-        /// </summary>
-        SpeechManager mySpeechManager;
-
 
         //expert data value holders
         private float PenPressure_Expert = 0f;
@@ -176,7 +165,7 @@ namespace CalligraphyTutor.ViewModel
         //public RelayCommand<StylusEventArgs> StylusDownEventCommand { get; set; }
         public RelayCommand<StylusEventArgs> StylusUpEventCommand { get; set; }
         public RelayCommand<StylusEventArgs> StylusMoveEventCommand { get; set; }
-        public RelayCommand<InkCanvasStrokeCollectedEventArgs> StrokeCollectedEventCommand { get; set; }
+        //public RelayCommand<InkCanvasStrokeCollectedEventArgs> StrokeCollectedEventCommand { get; set; }
         #endregion
 
         #region send data
@@ -211,7 +200,7 @@ namespace CalligraphyTutor.ViewModel
             LoadButtonCommand = new RelayCommand(LoadStrokes);
             StylusUpEventCommand = new RelayCommand<StylusEventArgs>(OnStylusUp);
             StylusMoveEventCommand = new RelayCommand<StylusEventArgs>(OnStylusMoved);
-            StrokeCollectedEventCommand = new RelayCommand<InkCanvasStrokeCollectedEventArgs>(OnStrokeCollected);
+            //StrokeCollectedEventCommand = new RelayCommand<InkCanvasStrokeCollectedEventArgs>(OnStrokeCollected);
             mySpeechManager = SpeechManager.Instance;
             ExpertInkCanvas.ExpertStrokeLoadedEvent += ExpertInkCanvas_ExpertStrokeLoadedEvent;
             try
@@ -272,7 +261,6 @@ namespace CalligraphyTutor.ViewModel
 
         public void OnStylusUp(StylusEventArgs e)
         {
-            StudentStrokeCount = StudentStrokes.Count;
             //Debug.WriteLine("PenUp");
             //reset all value when the pen is lifted
             PenPressure = 0f;
@@ -330,8 +318,9 @@ namespace CalligraphyTutor.ViewModel
         public void OnStrokeCollected(InkCanvasStrokeCollectedEventArgs e)
         {
             Debug.WriteLine("Stroke Collected");
-            StudentStrokeCount = StudentStrokes.Count;
+            //StudentStrokeCount += 1;
         }
+
         #endregion
 
         #region Send data
@@ -418,6 +407,7 @@ namespace CalligraphyTutor.ViewModel
         public void ClearStrokes()
         {
             StudentStrokes.Clear();
+            StudentStrokeCount = 0;
         }
         private void LoadStrokes()
         {

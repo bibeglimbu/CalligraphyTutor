@@ -22,6 +22,7 @@ namespace CalligraphyTutor.CustomInkCanvas
     {
         #region Dependency Property
 
+        #region StrokeChecked
         /// <summary>
         /// Dependency property for binding the Stroke checked state from view model
         /// </summary>
@@ -47,7 +48,9 @@ namespace CalligraphyTutor.CustomInkCanvas
                 SetValue(StrokeCheckedProperty, value);
             }
         }
+        #endregion Stroke Checked
 
+        #region PressureChecked
         /// <summary>
         /// Dependency property for binding the pressure checked state from view model
         /// </summary>
@@ -73,7 +76,9 @@ namespace CalligraphyTutor.CustomInkCanvas
                 SetValue(PressureCheckedProperty, value);
             }
         }
+        #endregion pressure checked
 
+        #region SpeedChecked
         /// <summary>
         /// Dependency property for binding the pressure checked state from view model
         /// </summary>
@@ -98,7 +103,9 @@ namespace CalligraphyTutor.CustomInkCanvas
                 SetValue(SpeedCheckedProperty, value);
             }
         }
+        #endregion speed checked
 
+        #region StudentVelocity
         /// <summary>
         /// Dependency property for binding Student velocity to the view model
         /// </summary>
@@ -107,6 +114,7 @@ namespace CalligraphyTutor.CustomInkCanvas
         private static void OnStudentVelocityChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
             //Debug.WriteLine(e.NewValue);
+            ((StudentInkCanvas)d).StudentVelocity = (double)e.NewValue;
         }
         /// <summary>
         /// holds the veolocity at which the stroke is being drawn
@@ -119,6 +127,33 @@ namespace CalligraphyTutor.CustomInkCanvas
                 SetValue(StudentVelocityProperty, value);
             }
         }
+        #endregion Student Velocity
+
+        #region StudentStrokeCount
+
+        /// <summary>
+        /// Dependency property for binding the Number of student strokes (not programatic) from view model
+        /// </summary>
+        public static DependencyProperty StudentStrokeCountProperty = DependencyProperty.Register("StudentStrokeCount", typeof(int), typeof(StudentInkCanvas),
+            new FrameworkPropertyMetadata(0, new PropertyChangedCallback(OnStudentStrokeCountChanged)));
+        private static void OnStudentStrokeCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        {
+            Debug.WriteLine("StudentStrokeCount ExpertIC" + ((int)e.NewValue).ToString());
+            ((StudentInkCanvas)d).StudentStrokeCount = (int)e.NewValue;
+        }
+        /// <summary>
+        /// Number of Strokes, as per original stroke and not the number of strokes that is programatically added.
+        /// </summary>
+        public int StudentStrokeCount
+        {
+            get { return (int)GetValue(StudentStrokeCountProperty); }
+            set
+            {
+                SetValue(StudentStrokeCountProperty, value);
+            }
+        }
+
+        #endregion Student Stroke Count
 
         #endregion
 
@@ -366,6 +401,8 @@ namespace CalligraphyTutor.CustomInkCanvas
             //if stroke is checked and the hit points are not null
             if (hitChangedPoints.Count !=0)
             {
+                StudentStrokeCount += 1;
+                Debug.WriteLine("ExpertIC / StudentStrokeCount :" + StudentStrokeCount);
                 //remove the stroke and instead create new stroke from _tempSPCollection at the end even though the PreviousColor may not have changed
                 this.Strokes.Remove(e.Stroke);
                 //stylus point collection that holds all the points in the arguements

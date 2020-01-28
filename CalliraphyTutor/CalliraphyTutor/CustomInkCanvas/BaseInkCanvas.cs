@@ -31,20 +31,20 @@ namespace CalligraphyTutor.CustomInkCanvas
 
     class BaseInkCanvas : InkCanvas
     {
-        #region dependency Property
-        public static readonly DependencyProperty IsStylusDownProperty = DependencyProperty.Register(
-            "IsStylusDown", typeof(bool), typeof(ExpertInkCanvas),
-            new PropertyMetadata(false, new PropertyChangedCallback(OnIsStylusDownChanged))
+        #region Dependency Property
+        public static readonly DependencyProperty IsStylusInRangeProperty = DependencyProperty.Register(
+            "IsStylusInRange", typeof(bool), typeof(BaseInkCanvas),
+            new PropertyMetadata(false, new PropertyChangedCallback(OnIsStylusInRangeChanged))
             );
-        public bool IsStylusDown
+        public bool IsStylusInRange
         {
-            get { return (bool)GetValue(IsStylusDownProperty); }
-            set { SetValue(IsStylusDownProperty, value); }
+            get { return (bool)GetValue(IsStylusInRangeProperty); }
+            set { SetValue(IsStylusInRangeProperty, value); }
         }
 
-        private static void OnIsStylusDownChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        private static void OnIsStylusInRangeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            Debug.WriteLine("StylusDown");
+            //Debug.WriteLine("StylusInRange");
         }
 
         #endregion
@@ -64,16 +64,15 @@ namespace CalligraphyTutor.CustomInkCanvas
         }
 
         #region overrides
-        protected override void OnStylusDown(StylusDownEventArgs e)
+        protected override void OnStylusInRange(StylusEventArgs e)
         {
-            IsStylusDown = true;
-            base.OnStylusDown(e);
+            IsStylusInRange = true;
+            base.OnStylusInRange(e);
         }
-        protected override void OnStylusUp(StylusEventArgs e)
+        protected override void OnStylusOutOfRange(StylusEventArgs e)
         {
-            IsStylusDown = false;
-
-            base.OnStylusUp(e);
+            IsStylusInRange = false;
+            base.OnStylusOutOfRange(e);
         }
         #endregion
 

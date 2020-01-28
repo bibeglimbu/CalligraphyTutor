@@ -48,14 +48,15 @@
             </Line>
 
             <cic:ExpertInkCanvas Height="400" DisplayAnimation="True" Strokes="{Binding ExpertStrokes}" EditingMode="None"  Background="Transparent" 
-                                 StudentStrokes="{Binding StudentStrokeCount, Mode=TwoWay}">
+                                 StudentStrokeCount ="{Binding StudentStrokeCount, Mode=TwoWay}">
             </cic:ExpertInkCanvas>
 
-            <cic:StudentInkCanvas Height="400" Strokes="{Binding StudentStrokes, Mode=TwoWay}" Background="Transparent"
-                StrokeChecked="{Binding ElementName=StrokeCheckBox, Path=IsChecked, Mode=TwoWay}" 
-                PressureChecked = "{Binding ElementName=PressureCheckBox, Path=IsChecked, Mode=TwoWay}"
-                SpeedChecked = "{Binding ElementName=SpeedCheckBox, Path=IsChecked, Mode=TwoWay}"
-                                  StudentVelocity="{Binding StudentVelocity, Mode=OneWayToSource}">
+            <cic:StudentInkCanvas Height="400" Strokes="{Binding StudentStrokes, Mode=OneWayToSource}" Background="Transparent"
+                StrokeChecked="{Binding StrokeIsChecked, Mode=TwoWay}" 
+                PressureChecked = "{Binding PressureIsChecked, Mode=TwoWay}"
+                SpeedChecked = "{Binding SpeedIsChecked, Mode=TwoWay}"
+                                  StudentVelocity="{Binding StudentVelocity, Mode=OneWayToSource}"
+                                  StudentStrokeCount="{Binding StudentStrokeCount, Mode=TwoWay}">
                 <i:Interaction.Triggers>
 
                     <i:EventTrigger EventName="StylusUp">
@@ -64,6 +65,10 @@
 
                     <i:EventTrigger EventName="StylusMove">
                         <mvvm:EventToCommand Command="{Binding StylusMoveEventCommand}" PassEventArgsToCommand="True" />
+                    </i:EventTrigger>
+
+                    <i:EventTrigger EventName="StrokeCollected">
+                        <mvvm:EventToCommand Command="{Binding StrokeCollectedEventCommand}" PassEventArgsToCommand="True" />
                     </i:EventTrigger>
 
                 </i:Interaction.Triggers>

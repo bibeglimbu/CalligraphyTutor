@@ -17,22 +17,22 @@ namespace CalligraphyTutor.CustomInkCanvas
 {
     class ExpertInkCanvas : BaseInkCanvas
     {
-        #region Variables
+        #region CustomDependencyProperty
 
         /// <summary>
         /// Dependency property for binding the Number of student strokes from view model
         /// </summary>
-        public static DependencyProperty StudentStrokeCountProperty = DependencyProperty.Register("StudentStrokes", typeof(int), typeof(ExpertInkCanvas),
-            new FrameworkPropertyMetadata(default(int), new PropertyChangedCallback(OnStudentStrokeCountChanged)));
+        public static DependencyProperty StudentStrokeCountProperty = DependencyProperty.Register("StudentStrokeCount", typeof(int), typeof(ExpertInkCanvas),
+            new FrameworkPropertyMetadata(0, new PropertyChangedCallback(OnStudentStrokeCountChanged)));
         private static void OnStudentStrokeCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            Debug.WriteLine("StudentStrokeCount ExpertIC" + ((int)e.NewValue).ToString()) ;
-            ((ExpertInkCanvas)d).StudentStrokes = (int)e.NewValue;
+            Debug.WriteLine("ExpertIC/StudentStrokeCount : " + ((int)e.NewValue).ToString()) ;
+            ((ExpertInkCanvas)d).StudentStrokeCount = (int)e.NewValue;
         }
         /// <summary>
         /// Number of Strokes in the student
         /// </summary>
-        public int StudentStrokes
+        public int StudentStrokeCount
         {
             get { return (int)GetValue(StudentStrokeCountProperty); }
             set
@@ -41,6 +41,9 @@ namespace CalligraphyTutor.CustomInkCanvas
             }
         }
 
+        #endregion Custom Dependency Property
+
+        #region Variables
         /// <summary>
         /// Timer for animation
         /// </summary>
@@ -74,6 +77,9 @@ namespace CalligraphyTutor.CustomInkCanvas
         }
 
         private bool _displayAnimation = true;
+        /// <summary>
+        /// True when animation is to be displayed
+        /// </summary>
         public bool DisplayAnimation
         {
             get { return _displayAnimation; }
@@ -121,9 +127,10 @@ namespace CalligraphyTutor.CustomInkCanvas
         #region EventHandlers
         private void StudentInkCanvas_PenInRangeEvent(object sender, StudentInkCanvas.PenInRangeEventEventArgs e)
         {
-            IsStylusDown = true;
+           //base.IsStylusInRange = true;
             //reset the animation variables
             ResetAnimation();
+            _dispatchTimer.Stop();
             //set the animation playing to false as the thread can be terminsated in the middle and it can still be true even when no animation is running
             AnimationPlaying = false;
 
@@ -131,7 +138,7 @@ namespace CalligraphyTutor.CustomInkCanvas
 
         private void StudentInkCanvas_PenOutOfRangeEvent(object sender, StudentInkCanvas.PenOutOfRangeEventArgs e)
         {
-            IsStylusDown = false;
+            //base.IsStylusInRange = false;
             //start the animation when this event is detected
             if (AnimationPlaying == false)
             {
@@ -143,7 +150,7 @@ namespace CalligraphyTutor.CustomInkCanvas
         private void _dispatchTimer_Tick(object sender, EventArgs e)
         {
             //if the user has not requested any animation, is writing or there no expert strokes loaded
-            if(DisplayAnimation == false || IsStylusDown == true || this.Strokes.Count ==0)
+            if(DisplayAnimation == false || base.IsStylusInRange == true || this.Strokes.Count ==0)
             {
                 return;
             }
@@ -152,11 +159,12 @@ namespace CalligraphyTutor.CustomInkCanvas
             //GetTimestamp(stroke.Last());
             Application.Current.Dispatcher.InvokeAsync(new Action( () =>
             {
-                if (StudentStrokes<0||StudentStrokes>this.Strokes.Count)
-                {
-                    StudentStrokes = 0;
-                }
-                Stroke sc = this.Strokes[StudentStrokes];
+                //if (StudentStrokes<0||StudentStrokes>this.Strokes.Count)
+                //{
+                //    StudentStrokes = 0;
+                //}
+                //Debug.WriteLine("StudentStrokeCount"+ StudentStrokeCount);
+                Stroke sc = this.Strokes[StudentStrokeCount];
                 DisplayStrokesPatterns(sc);
             }));
         }
