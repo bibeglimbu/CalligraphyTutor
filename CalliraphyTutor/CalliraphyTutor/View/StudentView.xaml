@@ -76,8 +76,11 @@
 
         </Grid>
 
-        <Grid Grid.Row="2" Background="#7ec0ee">
-            <TextBlock Grid.Column="1"></TextBlock>
+        <Grid Grid.Row="2" Background="#7ec0ee" HorizontalAlignment="Center">
+            <DockPanel>
+                <CheckBox x:Name="AudioCheckBox" Grid.Column="0" IsChecked="{Binding PressureIsChecked, Mode=TwoWay}" FontFamily="Arial" FontSize="12">Color Coded Pressure Feedback </CheckBox>
+                <CheckBox x:Name="ColorCheckBox" Grid.Column="0" IsChecked="{Binding SpeedIsChecked, Mode=TwoWay}" FontFamily="Arial" FontSize="12">Audio based Pressure Feedback</CheckBox>
+            </DockPanel>
         </Grid>
 
         <Grid Grid.Row="3" HorizontalAlignment="Center">

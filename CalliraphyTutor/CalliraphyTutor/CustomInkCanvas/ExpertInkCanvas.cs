@@ -26,7 +26,7 @@ namespace CalligraphyTutor.CustomInkCanvas
             new FrameworkPropertyMetadata(0, new PropertyChangedCallback(OnStudentStrokeCountChanged)));
         private static void OnStudentStrokeCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            Debug.WriteLine("ExpertIC/StudentStrokeCount : " + ((int)e.NewValue).ToString()) ;
+            //Debug.WriteLine("ExpertIC/StudentStrokeCount : " + ((int)e.NewValue).ToString()) ;
             ((ExpertInkCanvas)d).StudentStrokeCount = (int)e.NewValue;
         }
         /// <summary>
@@ -200,7 +200,7 @@ namespace CalligraphyTutor.CustomInkCanvas
         {
             //add styluspoint from the event after checking to ensure that the collection doesnt already posses them
             myStrokeAttManager.StrokeTime.Add(e.Timestamp);
-            Debug.WriteLine("TimeTaken_PenDown:" + e.Timestamp);
+            //Debug.WriteLine("TimeTaken_PenDown:" + e.Timestamp);
             base.OnStylusDown(e);
         }
 
@@ -208,7 +208,7 @@ namespace CalligraphyTutor.CustomInkCanvas
         {
             //add styluspoint from the event after checking to ensure that the collection doesnt already posses them
             myStrokeAttManager.StrokeTime.Add(e.Timestamp);
-            Debug.WriteLine("TimeTaken_StylusUp:" + e.Timestamp);
+            //Debug.WriteLine("TimeTaken_StylusUp:" + e.Timestamp);
             base.OnStylusMove(e);
         }
 
@@ -221,7 +221,7 @@ namespace CalligraphyTutor.CustomInkCanvas
                 //create a custom Stroke
                 Stroke customStroke = new Stroke(e.Stroke.StylusPoints);
                 double expertVelocity = myStrokeAttManager.CalculateVelocity(customStroke);
-                Debug.WriteLine("Expert Velocity: " + expertVelocity);
+                //Debug.WriteLine("Expert Velocity: " + expertVelocity);
                 //attach customStroke
                 customStroke.AddPropertyData(ExpertVelocity_Guid, expertVelocity);
                 this.Strokes.Add(customStroke);

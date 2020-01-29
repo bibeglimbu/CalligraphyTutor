@@ -70,6 +70,28 @@ namespace CalligraphyTutor.ViewModel
                 RaisePropertyChanged("StudentStrokeCount");
             }
         }
+
+        private bool _colorCodedFeedback = false;
+        public bool ColorCodedFeedback
+        {
+            get { return _colorCodedFeedback; }
+            set
+            {
+                _colorCodedFeedback = value;
+                RaisePropertyChanged("ColorCodedFeedback");
+            }
+        }
+
+        private bool _auditoryFeedback = false;
+        public bool AuditoryFeedback
+        {
+            get { return _auditoryFeedback; }
+            set
+            {
+                _auditoryFeedback = value;
+                RaisePropertyChanged("AuditoryFeedback");
+            }
+        }
         #endregion Binding
 
         #region Properties
@@ -194,7 +216,7 @@ namespace CalligraphyTutor.ViewModel
         /// </summary>
         public StudentViewModel()
         {
-            Debug.WriteLine("instantiated StudentViewModel");
+            //Debug.WriteLine("instantiated StudentViewModel");
             RecordButtonCommand = new RelayCommand(StartRecordingData);
             ClearButtonCommand = new RelayCommand(ClearStrokes);
             LoadButtonCommand = new RelayCommand(LoadStrokes);
@@ -317,7 +339,7 @@ namespace CalligraphyTutor.ViewModel
 
         public void OnStrokeCollected(InkCanvasStrokeCollectedEventArgs e)
         {
-            Debug.WriteLine("Stroke Collected");
+            //Debug.WriteLine("Stroke Collected");
             //StudentStrokeCount += 1;
         }
 

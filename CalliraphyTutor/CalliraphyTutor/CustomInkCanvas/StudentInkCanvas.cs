@@ -138,7 +138,7 @@ namespace CalligraphyTutor.CustomInkCanvas
             new FrameworkPropertyMetadata(0, new PropertyChangedCallback(OnStudentStrokeCountChanged)));
         private static void OnStudentStrokeCountChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            Debug.WriteLine("StudentStrokeCount ExpertIC" + ((int)e.NewValue).ToString());
+            //Debug.WriteLine("StudentStrokeCount ExpertIC" + ((int)e.NewValue).ToString());
             ((StudentInkCanvas)d).StudentStrokeCount = (int)e.NewValue;
         }
         /// <summary>
@@ -150,6 +150,7 @@ namespace CalligraphyTutor.CustomInkCanvas
             set
             {
                 SetValue(StudentStrokeCountProperty, value);
+                this.studentCustomRenderer.StudentStrokeCount = value;
             }
         }
 
@@ -210,7 +211,7 @@ namespace CalligraphyTutor.CustomInkCanvas
             this.DynamicRenderer = studentCustomRenderer;
             this.EditingMode = InkCanvasEditingMode.Ink;
             StudentDynamicRenderer.HitChangePointsEvent += StudentDynamicRenderer_HitChangePointsEvent;
-            StudentDynamicRenderer.NearestStylusPointCalculatedEvent += StudentDynamicRenderer_NearestStylusPointCalculatedEvent;
+            //StudentDynamicRenderer.NearestStylusPointCalculatedEvent += StudentDynamicRenderer_NearestStylusPointCalculatedEvent;
             this.DefaultDrawingAttributes.FitToCurve = false;
             this.DefaultDrawingAttributes.StylusTip = StylusTip.Ellipse;
         }
@@ -311,11 +312,11 @@ namespace CalligraphyTutor.CustomInkCanvas
         {
             hitChangedPoints = e.hitChangedPoints;
         }
-        private void StudentDynamicRenderer_NearestStylusPointCalculatedEvent(object sender, StudentDynamicRenderer.NearestExpertStylusPointCalculatedEventArgs e)
-        {
-            ExpertVelocity = GetGuidValue(e.stroke, ExpertVelocity_Guid);
-            Debug.WriteLine("Expert Velocity: " + ExpertVelocity);
-        }
+        //private void StudentDynamicRenderer_NearestStylusPointCalculatedEvent(object sender, StudentDynamicRenderer.NearestExpertStylusPointCalculatedEventArgs e)
+        //{
+        //    ExpertVelocity = GetGuidValue(e.stroke, ExpertVelocity_Guid);
+        //    Debug.WriteLine("Expert Velocity: " + ExpertVelocity);
+        //}
         #endregion
 
         #region OverRides
@@ -371,11 +372,14 @@ namespace CalligraphyTutor.CustomInkCanvas
             {
                 return;
             }
-            Debug.WriteLine("Students POint: " + e.GetStylusPoints((InkCanvas)e.Source).Count);
+            //Debug.WriteLine("Students POint: " + e.GetStylusPoints((InkCanvas)e.Source).Count);
             //add the time at which the event is thrown
             myStrokeAttManager.StrokeTime.Add(e.Timestamp);
-            //provide the feedback on the speed. 
-            GiveSpeedFeedbackAsync(tempStroke);
+            //provide the feedback on the speed.
+            if (SpeedChecked)
+            {
+                GiveSpeedFeedbackAsync(tempStroke);
+            }
             base.OnStylusMove(e);
         }
 
@@ -402,7 +406,7 @@ namespace CalligraphyTutor.CustomInkCanvas
             if (hitChangedPoints.Count !=0)
             {
                 StudentStrokeCount += 1;
-                Debug.WriteLine("ExpertIC / StudentStrokeCount :" + StudentStrokeCount);
+                //Debug.WriteLine("StudentIC / StudentStrokeCount :" + StudentStrokeCount);
                 //remove the stroke and instead create new stroke from _tempSPCollection at the end even though the PreviousColor may not have changed
                 this.Strokes.Remove(e.Stroke);
                 //stylus point collection that holds all the points in the arguements
@@ -449,7 +453,7 @@ namespace CalligraphyTutor.CustomInkCanvas
                 double  tempVelocity = myStrokeAttManager.CalculateVelocity(s);
                 if(tempVelocity <=0 || Double.IsInfinity(tempVelocity) || Double.IsNaN(tempVelocity))
                 {
-                    Debug.WriteLine("StudentStrokeCount Invalid Value: " + tempVelocity + System.Environment.NewLine);
+                    //Debug.WriteLine("StudentStrokeCount Invalid Value: " + tempVelocity + System.Environment.NewLine);
                     return;
                 }
 
@@ -457,7 +461,7 @@ namespace CalligraphyTutor.CustomInkCanvas
                 if (tempVelocity > ExpertVelocity + SpeedThreshold)
                 {
                     playSound(cts.Token);
-                    Debug.WriteLine("Sound gong played");
+                    //Debug.WriteLine("Sound gong played");
                 }
                 if (myStrokeAttManager.StrokeTime.Count > 2)
                 {
